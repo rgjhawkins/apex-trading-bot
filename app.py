@@ -161,7 +161,7 @@ def get_rules():
 def set_rules():
     data = request.json or {}
     saved = save_rules(data)
-    engine._add_log("INFO", "Trading rules updated")
+    engine._log("INFO", "Trading rules updated")
     return jsonify(saved)
 
 
@@ -183,7 +183,21 @@ def bot_log():
     return jsonify(engine.get_log(limit))
 
 
+@app.route("/api/positions")
+def api_positions():
+    return jsonify({
+        "open":   engine.pm.get_open_positions(),
+        "closed": engine.pm.get_closed_trades(50),
+        "stats":  engine.pm.get_stats(),
+    })
+
+
+@app.route("/api/bot/stats")
+def api_bot_stats():
+    return jsonify(engine.get_stats())
+
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
+    port = int(os.environ.get("PORT", 5001))
     debug = os.environ.get("FLASK_ENV") == "development"
     app.run(host="0.0.0.0", port=port, debug=debug, use_reloader=False)

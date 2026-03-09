@@ -671,12 +671,32 @@
         <button class="btn btn-stop" id="btn-stop" onclick="botStop()" disabled>■ Stop Bot</button>
         <div style="margin-top:12px">
           <div class="bot-stat-row">
-            <span class="bot-stat-label">Trades Today</span>
+            <span class="bot-stat-label">Starting Capital</span>
+            <span class="bot-stat-val">$100.00</span>
+          </div>
+          <div class="bot-stat-row">
+            <span class="bot-stat-label">Current Value</span>
+            <span class="bot-stat-val" id="stat-value">—</span>
+          </div>
+          <div class="bot-stat-row">
+            <span class="bot-stat-label">Total P&L</span>
+            <span class="bot-stat-val" id="stat-pnl">—</span>
+          </div>
+          <div class="bot-stat-row">
+            <span class="bot-stat-label">Win Rate</span>
+            <span class="bot-stat-val" id="stat-winrate">—</span>
+          </div>
+          <div class="bot-stat-row">
+            <span class="bot-stat-label">Trades Total</span>
             <span class="bot-stat-val" id="stat-trades">—</span>
           </div>
           <div class="bot-stat-row">
-            <span class="bot-stat-label">P&L Today</span>
-            <span class="bot-stat-val" id="stat-pnl">—</span>
+            <span class="bot-stat-label">Open Positions</span>
+            <span class="bot-stat-val" id="stat-open">—</span>
+          </div>
+          <div class="bot-stat-row">
+            <span class="bot-stat-label">Capital Deployed</span>
+            <span class="bot-stat-val" id="stat-deployed">—</span>
           </div>
           <div class="bot-stat-row">
             <span class="bot-stat-label">Last Tick</span>
@@ -788,14 +808,14 @@
     <div id="portfolio-section">
       <div class="portfolio-summary">
         <div class="summary-card">
-          <div class="summary-label">Total Portfolio Value</div>
-          <div class="summary-value gold" id="total-value"><span class="spinner"></span></div>
-          <div class="summary-sub" id="account-type">SPOT</div>
+          <div class="summary-label">Bot Value</div>
+          <div class="summary-value gold" id="bot-value">$100.00</div>
+          <div class="summary-sub" id="bot-pnl-sub" style="color:var(--text-dim)">$0.00 (0.00%)</div>
         </div>
         <div class="summary-card">
-          <div class="summary-label">USDT Balance</div>
-          <div class="summary-value" id="usdt-balance">—</div>
-          <div class="summary-sub">Available</div>
+          <div class="summary-label">Capital Available</div>
+          <div class="summary-value" id="cap-available">$100.00</div>
+          <div class="summary-sub" id="cap-deployed">$0.00 deployed</div>
         </div>
         <div class="summary-card">
           <div class="summary-label">BTC Price</div>
@@ -813,13 +833,55 @@
     <!-- Positions / Orders Tabs -->
     <div id="positions-section">
       <div class="tabs">
-        <div class="tab active" onclick="switchTab('orders')">Order History</div>
-        <div class="tab" onclick="switchTab('open')">Open Orders</div>
+        <div class="tab active" onclick="switchTab('positions')">Bot Positions</div>
+        <div class="tab" onclick="switchTab('trades')">Trade History</div>
+        <div class="tab" onclick="switchTab('orders')">Exchange Orders</div>
         <div class="tab" onclick="switchTab('balances')">Balances</div>
       </div>
 
-      <!-- Orders Tab -->
-      <div id="tab-orders" class="data-table-wrap">
+      <!-- Bot Positions Tab (open) -->
+      <div id="tab-positions" class="data-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Entry</th>
+              <th>Stop Loss</th>
+              <th>TP1</th>
+              <th>Qty</th>
+              <th>Size</th>
+              <th>TP1</th>
+              <th>Candles</th>
+            </tr>
+          </thead>
+          <tbody id="positions-tbody">
+            <tr><td colspan="8"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-text">No open positions — bot is watching for signals</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Trade History Tab -->
+      <div id="tab-trades" class="data-table-wrap" style="display:none">
+        <table>
+          <thead>
+            <tr>
+              <th>Symbol</th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th>P&L $</th>
+              <th>P&L %</th>
+              <th>Reason</th>
+              <th>Candles</th>
+            </tr>
+          </thead>
+          <tbody id="trades-tbody">
+            <tr><td colspan="7"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-text">No completed trades yet</div></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Exchange Orders Tab -->
+      <div id="tab-orders" class="data-table-wrap" style="display:none">
         <table>
           <thead>
             <tr>
@@ -834,25 +896,6 @@
           </thead>
           <tbody id="orders-tbody">
             <tr><td colspan="7"><div class="empty-state"><div class="spinner"></div><div class="empty-text">Loading orders</div></div></td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Open Orders Tab -->
-      <div id="tab-open" class="data-table-wrap" style="display:none">
-        <table>
-          <thead>
-            <tr>
-              <th>Symbol</th>
-              <th>Side</th>
-              <th>Qty</th>
-              <th>Price</th>
-              <th>Stop Price</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody id="open-tbody">
-            <tr><td colspan="6"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-text">No open orders</div></div></td></tr>
           </tbody>
         </table>
       </div>
@@ -936,11 +979,11 @@ function toggleTrailingStop() {
 // ── Tabs ───────────────────────────────────────────────────────────
 function switchTab(tab) {
   state.activeTab = tab;
+  const allTabs = ['positions', 'trades', 'orders', 'balances'];
   document.querySelectorAll('.tab').forEach((el, i) => {
-    const tabs = ['orders', 'open', 'balances'];
-    el.classList.toggle('active', tabs[i] === tab);
+    el.classList.toggle('active', allTabs[i] === tab);
   });
-  ['orders', 'open', 'balances'].forEach(t => {
+  allTabs.forEach(t => {
     document.getElementById('tab-' + t).style.display = t === tab ? '' : 'none';
   });
 }
@@ -988,9 +1031,7 @@ async function pollStatus() {
 
     // Stats
     const bot = d.bot || {};
-    document.getElementById('stat-trades').textContent = bot.trades_today ?? 0;
-    document.getElementById('stat-pnl').textContent = bot.pnl_today !== undefined
-      ? '$' + fmt(bot.pnl_today) : '—';
+    document.getElementById('stat-trades').textContent = bot.trades_total ?? 0;
     document.getElementById('stat-tick').textContent = bot.last_tick
       ? bot.last_tick.split('T')[1]?.slice(0,8) ?? '—' : '—';
 
@@ -1005,19 +1046,91 @@ async function pollPortfolio() {
     const r = await fetch('/api/portfolio');
     const d = await r.json();
     if (d.error) return;
-
     state.balances = d.balances || [];
-
-    document.getElementById('total-value').textContent = '$' + fmt(d.total_usdt);
-    document.getElementById('account-type').textContent = d.account_type || 'SPOT';
-
-    // USDT balance
-    const usdt = state.balances.find(b => b.asset === 'USDT');
-    document.getElementById('usdt-balance').textContent = usdt ? '$' + fmt(usdt.free) : '—';
-
-    // Balances tab
     renderBalances();
   } catch(e) {}
+}
+
+// ── Bot Positions Poll ─────────────────────────────────────────────
+async function pollPositions() {
+  try {
+    const r = await fetch('/api/positions');
+    const d = await r.json();
+    const stats = d.stats || {};
+
+    // Summary cards
+    const val    = stats.current_value ?? 100;
+    const pnl    = stats.total_pnl ?? 0;
+    const pnlPct = stats.total_pnl_pct ?? 0;
+    document.getElementById('bot-value').textContent = '$' + fmt(val);
+    const pnlEl = document.getElementById('bot-pnl-sub');
+    const sign  = pnl >= 0 ? '+' : '';
+    pnlEl.textContent  = `${sign}$${fmt(pnl)} (${sign}${fmt(pnlPct)}%)`;
+    pnlEl.style.color  = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+
+    document.getElementById('cap-available').textContent = '$' + fmt(stats.capital_available ?? 100);
+    document.getElementById('cap-deployed').textContent  = '$' + fmt(stats.capital_deployed ?? 0) + ' deployed';
+
+    // Sidebar stats
+    document.getElementById('stat-value').textContent    = '$' + fmt(val);
+    document.getElementById('stat-pnl').textContent      = (pnl >= 0 ? '+' : '') + '$' + fmt(pnl);
+    document.getElementById('stat-pnl').style.color      = pnl >= 0 ? 'var(--green)' : 'var(--red)';
+    document.getElementById('stat-winrate').textContent  = fmt(stats.win_rate ?? 0, 1) + '%';
+    document.getElementById('stat-trades').textContent   = stats.trades_total ?? 0;
+    document.getElementById('stat-open').textContent     = stats.open_positions ?? 0;
+    document.getElementById('stat-deployed').textContent = '$' + fmt(stats.capital_deployed ?? 0);
+
+    // Render tables
+    renderOpenPositions(d.open || []);
+    renderTradeHistory(d.closed || []);
+  } catch(e) {}
+}
+
+function renderOpenPositions(positions) {
+  const tbody = document.getElementById('positions-tbody');
+  if (!positions.length) {
+    tbody.innerHTML = '<tr><td colspan="8"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-text">No open positions — watching for signals</div></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = positions.map(p => {
+    const tp1Badge = p.tp1_hit
+      ? '<span class="status-badge status-filled">HIT ✓</span>'
+      : '<span class="status-badge status-new">PENDING</span>';
+    return `<tr>
+      <td class="symbol">${p.symbol}</td>
+      <td class="mono">$${fmt(p.entry_price, 4)}</td>
+      <td class="mono" style="color:var(--red)">$${fmt(p.stop_loss, 4)}</td>
+      <td class="mono" style="color:var(--green)">$${fmt(p.tp1_price, 4)}</td>
+      <td class="mono">${fmt(p.quantity, 6)}</td>
+      <td class="mono">$${fmt(p.usdt_size)}</td>
+      <td>${tp1Badge}</td>
+      <td class="mono">${p.candles_open}h</td>
+    </tr>`;
+  }).join('');
+}
+
+function renderTradeHistory(trades) {
+  const tbody = document.getElementById('trades-tbody');
+  const full  = trades.filter(t => !t.partial);
+  if (!full.length) {
+    tbody.innerHTML = '<tr><td colspan="7"><div class="empty-state"><div class="empty-icon">◎</div><div class="empty-text">No completed trades yet</div></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = full.map(t => {
+    const pnlCls  = t.pnl_usdt >= 0 ? 'up' : 'down';
+    const sign    = t.pnl_usdt >= 0 ? '+' : '';
+    const reasons = { STOP_LOSS:'STOP', TP2_TRAIL:'TP2', TIME_STOP:'TIME', TP1:'TP1' };
+    const reason  = reasons[t.reason] || t.reason;
+    return `<tr>
+      <td class="symbol">${t.symbol}</td>
+      <td class="mono">$${fmt(t.entry_price, 4)}</td>
+      <td class="mono">$${fmt(t.exit_price, 4)}</td>
+      <td class="mono ${pnlCls}">${sign}$${fmt(t.pnl_usdt, 4)}</td>
+      <td class="mono ${pnlCls}">${sign}${fmt(t.pnl_pct, 2)}%</td>
+      <td><span class="status-badge ${t.pnl_usdt >= 0 ? 'status-filled' : 'status-canceled'}">${reason}</span></td>
+      <td class="mono">${t.candles_held ?? '—'}h</td>
+    </tr>`;
+  }).join('');
 }
 
 function renderBalances() {
@@ -1219,14 +1332,15 @@ async function botStop() {
 async function init() {
   await loadRules();
   await pollStatus();
-  await Promise.all([pollPortfolio(), pollTickers(), pollOrders(), pollLog()]);
+  await Promise.all([pollPositions(), pollPortfolio(), pollTickers(), pollOrders(), pollLog()]);
 }
 
 init();
 setInterval(pollStatus,    5000);
+setInterval(pollPositions, 10000);
 setInterval(pollTickers,   8000);
-setInterval(pollPortfolio, 30000);
-setInterval(pollOrders,    15000);
+setInterval(pollPortfolio, 60000);
+setInterval(pollOrders,    30000);
 setInterval(pollLog,       5000);
 </script>
 </body>
