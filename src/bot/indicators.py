@@ -87,11 +87,19 @@ def compute_indicators(df: pd.DataFrame) -> pd.DataFrame:
     return df.dropna()
 
 
-def get_signal(df: pd.DataFrame) -> dict:
+def get_signal(df: pd.DataFrame, rules: dict = None) -> dict:
     """
     Evaluate entry signal on the last CLOSED candle (index -2).
     Never uses the live forming candle (index -1).
     """
+    if rules is None:
+        rules = {}
+
+    rsi_low    = rules.get("rsi_dip_low",    42.0)
+    rsi_high   = rules.get("rsi_dip_high",   55.0)
+    rsi_cross  = rules.get("rsi_cross_level", 50.0)
+    adx_min    = rules.get("adx_min",        20.0)
+
     if len(df) < 3:
         return {"signal": False, "reason": "insufficient data"}
 
@@ -99,10 +107,10 @@ def get_signal(df: pd.DataFrame) -> dict:
     c1 = df.iloc[-3]   # candle before that (for RSI crossover)
 
     checks = {
-        "trend_aligned":    bool(c["ema20"] > c["ema50"] > c["ema200"]),
-        "adx_ok":           bool(c["adx"] > 20),
-        "rsi_dipped":       bool(42 <= c1["rsi"] <= 55),
-        "rsi_cross":        bool(c1["rsi"] < 50 and c["rsi"] >= 50),
+        "trend_aligned":     bool(c["ema20"] > c["ema50"] > c["ema200"]),
+        "adx_ok":            bool(c["adx"] > adx_min),
+        "rsi_dipped":        bool(rsi_low <= c1["rsi"] <= rsi_high),
+        "rsi_cross":         bool(c1["rsi"] < rsi_cross and c["rsi"] >= rsi_cross),
         "price_above_ema50": bool(c["close"] > c["ema50"]),
     }
 

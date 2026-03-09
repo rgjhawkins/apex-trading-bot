@@ -139,7 +139,7 @@ class BotEngine:
 
         self._last_candle_time[symbol] = last_closed_open_time
 
-        result = get_signal(df)
+        result = get_signal(df, rules)
 
         if not result["signal"]:
             # Log why (only log one failed check to avoid spam)
@@ -162,13 +162,14 @@ class BotEngine:
         entry_price = signal["close"]
         atr         = signal["atr"]
 
-        qty, usdt_size, stop_loss = self.pm.calculate_size(entry_price, atr)
+        qty, usdt_size, stop_loss = self.pm.calculate_size(entry_price, atr, rules)
 
         if qty <= 0 or usdt_size < MIN_NOTIONAL:
             self._log("INFO", f"{symbol} — signal fired but position size too small (${usdt_size:.2f})")
             return
 
-        tp1_price = round(entry_price + (1.5 * atr), 4)
+        atr_tp1_mult = rules.get("atr_tp1_mult", 1.5)
+        tp1_price = round(entry_price + (atr_tp1_mult * atr), 4)
 
         try:
             order = self.client.client.order_market_buy(
@@ -188,6 +189,7 @@ class BotEngine:
             usdt_size=usdt_size,
             atr=atr,
             order_id=order_id,
+            rules=rules,
         )
 
         self._log("TRADE",
@@ -222,7 +224,7 @@ class BotEngine:
                 self._log("ERROR", f"{symbol} TP1 sell failed: {e}")
                 tp1_fill = close
 
-            self.pm.hit_tp1(symbol, tp1_fill)
+            self.pm.hit_tp1(symbol, tp1_fill, rules=rules)
             self._log("TRADE",
                 f"TP1 {symbol} | sold 40% @ ${tp1_fill:.4f} "
                 f"| PnL ${(tp1_fill - pos.entry_price) * tp1_qty:.2f}"
@@ -234,8 +236,9 @@ class BotEngine:
             self._exit(symbol, close, "TP2_TRAIL")
             return
 
-        # ── Time stop: exit losing position after 20 candles ──────
-        if pos.candles_open >= TIME_STOP_CANDLES and close < pos.entry_price:
+        # ── Time stop: exit losing position after N candles ───────
+        time_stop = rules.get("time_stop_candles", TIME_STOP_CANDLES)
+        if pos.candles_open >= time_stop and close < pos.entry_price:
             self._exit(symbol, close, "TIME_STOP")
             return
 
@@ -273,8 +276,10 @@ class BotEngine:
     # ── Kill-switch ────────────────────────────────────────────────
 
     def _check_daily_loss(self):
+        rules      = load_rules()
         pnl_today  = self.pm.get_stats()["total_pnl"]
-        loss_limit = self.pm.starting_capital * (MAX_DAILY_LOSS_PCT / 100)
+        loss_pct   = rules.get("daily_loss_limit_pct", MAX_DAILY_LOSS_PCT)
+        loss_limit = self.pm.starting_capital * (loss_pct / 100)
         if pnl_today < -abs(loss_limit):
             self._daily_loss_halt = True
             self._log("ERROR",

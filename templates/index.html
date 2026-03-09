@@ -713,86 +713,105 @@
       </div>
       <div class="rules-form">
 
+        <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);padding:4px 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px">
+          ENTRY FILTERS
+        </div>
+
         <div class="rule-group">
-          <label class="rule-label">Take Profit</label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-take-profit" min="0.5" max="50" step="0.5" value="5" oninput="syncSlider('take-profit')">
-            <span class="slider-val" id="sv-take-profit">5.0%</span>
+          <label class="rule-label">RSI Dip Zone (low – high)</label>
+          <div style="display:flex;gap:6px">
+            <div class="rule-input-wrap" style="flex:1">
+              <input type="number" class="rule-input" id="r-rsi-low" value="42" min="20" max="60" step="1">
+            </div>
+            <div class="rule-input-wrap" style="flex:1">
+              <input type="number" class="rule-input" id="r-rsi-high" value="55" min="40" max="70" step="1">
+            </div>
           </div>
         </div>
 
         <div class="rule-group">
-          <label class="rule-label">Stop Loss</label>
+          <label class="rule-label">RSI Cross Level (recovery trigger)</label>
           <div class="rule-slider-wrap">
-            <input type="range" id="r-stop-loss" min="0.5" max="30" step="0.5" value="3" oninput="syncSlider('stop-loss')">
-            <span class="slider-val" id="sv-stop-loss">3.0%</span>
+            <input type="range" id="r-rsi-cross" min="40" max="60" step="1" value="50" oninput="syncSlider('rsi-cross')">
+            <span class="slider-val" id="sv-rsi-cross">50</span>
           </div>
         </div>
 
         <div class="rule-group">
-          <label class="rule-label">Trailing Stop</label>
-          <div class="rule-toggle">
-            <span style="font-size:10px;color:var(--text-dim)">Enable trailing stop</span>
-            <label class="toggle-switch">
-              <input type="checkbox" id="r-trailing-stop" onchange="toggleTrailingStop()">
-              <span class="toggle-track"></span>
-            </label>
+          <label class="rule-label">ADX Minimum (trend strength)</label>
+          <div class="rule-slider-wrap">
+            <input type="range" id="r-adx-min" min="10" max="40" step="1" value="20" oninput="syncSlider('adx-min')">
+            <span class="slider-val" id="sv-adx-min">20</span>
           </div>
         </div>
 
-        <div class="rule-group" id="trailing-pct-group" style="display:none">
-          <label class="rule-label">Trailing Stop %</label>
+        <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);padding:4px 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px;margin-top:6px">
+          STOP LOSS & TAKE PROFIT
+        </div>
+
+        <div class="rule-group">
+          <label class="rule-label">ATR Stop Multiplier <span style="color:var(--text-dim)">(stop = entry − ATR × X)</span></label>
           <div class="rule-slider-wrap">
-            <input type="range" id="r-trailing-pct" min="0.5" max="10" step="0.5" value="1.5" oninput="syncSlider('trailing-pct')">
-            <span class="slider-val" id="sv-trailing-pct">1.5%</span>
+            <input type="range" id="r-atr-stop" min="0.5" max="5" step="0.5" value="1.5" oninput="syncSlider('atr-stop')">
+            <span class="slider-val" id="sv-atr-stop">1.5×</span>
           </div>
         </div>
 
         <div class="rule-group">
-          <label class="rule-label">Max Position Size (% of portfolio)</label>
+          <label class="rule-label">ATR TP1 Multiplier <span style="color:var(--text-dim)">(TP1 = entry + ATR × X)</span></label>
           <div class="rule-slider-wrap">
-            <input type="range" id="r-pos-size" min="1" max="100" step="1" value="10" oninput="syncSlider('pos-size')">
-            <span class="slider-val" id="sv-pos-size">10%</span>
+            <input type="range" id="r-atr-tp1" min="0.5" max="5" step="0.5" value="1.5" oninput="syncSlider('atr-tp1')">
+            <span class="slider-val" id="sv-atr-tp1">1.5×</span>
+          </div>
+        </div>
+
+        <div class="rule-group">
+          <label class="rule-label">TP1 Exit Size <span style="color:var(--text-dim)">(% of position to close at TP1)</span></label>
+          <div class="rule-slider-wrap">
+            <input type="range" id="r-tp1-pct" min="10" max="90" step="10" value="40" oninput="syncSlider('tp1-pct')">
+            <span class="slider-val" id="sv-tp1-pct">40%</span>
+          </div>
+        </div>
+
+        <div class="rule-group">
+          <label class="rule-label">Time Stop <span style="color:var(--text-dim)">(exit losing trade after N candles)</span></label>
+          <div class="rule-slider-wrap">
+            <input type="range" id="r-time-stop" min="4" max="48" step="2" value="20" oninput="syncSlider('time-stop')">
+            <span class="slider-val" id="sv-time-stop">20h</span>
+          </div>
+        </div>
+
+        <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);padding:4px 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px;margin-top:6px">
+          RISK & POSITION SIZING
+        </div>
+
+        <div class="rule-group">
+          <label class="rule-label">Risk Per Trade <span style="color:var(--text-dim)">(% of $100 capital)</span></label>
+          <div class="rule-slider-wrap">
+            <input type="range" id="r-risk-pct" min="0.5" max="5" step="0.5" value="1" oninput="syncSlider('risk-pct')">
+            <span class="slider-val" id="sv-risk-pct">1.0%</span>
           </div>
         </div>
 
         <div class="rule-group">
           <label class="rule-label">Max Open Positions</label>
           <div class="rule-slider-wrap">
-            <input type="range" id="r-max-pos" min="1" max="20" step="1" value="3" oninput="syncSlider('max-pos')">
+            <input type="range" id="r-max-pos" min="1" max="10" step="1" value="3" oninput="syncSlider('max-pos')">
             <span class="slider-val" id="sv-max-pos">3</span>
           </div>
         </div>
 
         <div class="rule-group">
-          <label class="rule-label">Min Trade Size (USDT)</label>
-          <div class="rule-input-wrap">
-            <input type="number" class="rule-input" id="r-min-volume" value="100" min="10" step="10">
-            <span class="rule-unit">USDT</span>
+          <label class="rule-label">Daily Loss Limit</label>
+          <div class="rule-slider-wrap">
+            <input type="range" id="r-daily-loss" min="1" max="10" step="0.5" value="3" oninput="syncSlider('daily-loss')">
+            <span class="slider-val" id="sv-daily-loss">3.0%</span>
           </div>
         </div>
 
         <div class="rule-group">
-          <label class="rule-label">Cooldown Between Trades</label>
-          <div class="rule-input-wrap">
-            <input type="number" class="rule-input" id="r-cooldown" value="60" min="5" step="5">
-            <span class="rule-unit">sec</span>
-          </div>
-        </div>
-
-        <div class="rule-group">
-          <label class="rule-label">Order Type</label>
-          <div class="rule-input-wrap">
-            <select class="rule-input" id="r-order-type">
-              <option value="MARKET">MARKET</option>
-              <option value="LIMIT">LIMIT</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="rule-group">
-          <label class="rule-label">Trade Pairs (comma separated)</label>
-          <input type="text" class="pairs-input" id="r-pairs" value="BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT" placeholder="BTCUSDT,ETHUSDT,...">
+          <label class="rule-label">Trade Pairs</label>
+          <input type="text" class="pairs-input" id="r-pairs" value="BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT" placeholder="BTCUSDT,ETHUSDT,...">
         </div>
 
         <button class="save-rules-btn" onclick="saveRules()">Save Rules</button>
@@ -962,18 +981,18 @@ function syncSlider(id) {
   const slider = document.getElementById('r-' + id);
   const label  = document.getElementById('sv-' + id);
   const val = parseFloat(slider.value);
-  if (id === 'max-pos') {
+  const noUnit  = ['max-pos', 'rsi-cross', 'adx-min', 'time-stop'];
+  const multUnit = ['atr-stop', 'atr-tp1'];
+  const hourUnit = ['time-stop'];
+  if (noUnit.includes(id) && !hourUnit.includes(id)) {
     label.textContent = val;
-  } else if (id === 'pos-size') {
-    label.textContent = val + '%';
+  } else if (hourUnit.includes(id)) {
+    label.textContent = val + 'h';
+  } else if (multUnit.includes(id)) {
+    label.textContent = val.toFixed(1) + '×';
   } else {
     label.textContent = val.toFixed(1) + '%';
   }
-}
-
-function toggleTrailingStop() {
-  const enabled = document.getElementById('r-trailing-stop').checked;
-  document.getElementById('trailing-pct-group').style.display = enabled ? 'block' : 'none';
 }
 
 // ── Tabs ───────────────────────────────────────────────────────────
@@ -1269,37 +1288,36 @@ async function loadRules() {
   try {
     const r = await fetch('/api/rules');
     const d = await r.json();
-    document.getElementById('r-take-profit').value = d.take_profit_pct;
-    document.getElementById('r-stop-loss').value   = d.stop_loss_pct;
-    document.getElementById('r-pos-size').value    = d.max_position_size_pct;
-    document.getElementById('r-max-pos').value     = d.max_open_positions;
-    document.getElementById('r-min-volume').value  = d.min_volume_usdt;
-    document.getElementById('r-cooldown').value    = d.cooldown_seconds;
-    document.getElementById('r-order-type').value  = d.order_type;
-    document.getElementById('r-trailing-stop').checked = d.trailing_stop;
-    document.getElementById('r-trailing-pct').value = d.trailing_stop_pct;
-    document.getElementById('r-pairs').value = (d.trade_pairs || []).join(',');
-    toggleTrailingStop();
-    syncSlider('take-profit');
-    syncSlider('stop-loss');
-    syncSlider('pos-size');
-    syncSlider('max-pos');
-    syncSlider('trailing-pct');
+    document.getElementById('r-rsi-low').value   = d.rsi_dip_low    ?? 42;
+    document.getElementById('r-rsi-high').value  = d.rsi_dip_high   ?? 55;
+    document.getElementById('r-rsi-cross').value = d.rsi_cross_level ?? 50;
+    document.getElementById('r-adx-min').value   = d.adx_min        ?? 20;
+    document.getElementById('r-atr-stop').value  = d.atr_stop_mult  ?? 1.5;
+    document.getElementById('r-atr-tp1').value   = d.atr_tp1_mult   ?? 1.5;
+    document.getElementById('r-tp1-pct').value   = d.tp1_exit_pct   ?? 40;
+    document.getElementById('r-time-stop').value = d.time_stop_candles ?? 20;
+    document.getElementById('r-risk-pct').value  = d.risk_per_trade_pct ?? 1;
+    document.getElementById('r-max-pos').value   = d.max_open_positions ?? 3;
+    document.getElementById('r-daily-loss').value = d.daily_loss_limit_pct ?? 3;
+    document.getElementById('r-pairs').value     = (d.trade_pairs || []).join(',');
+    ['rsi-cross','adx-min','atr-stop','atr-tp1','tp1-pct','time-stop','risk-pct','max-pos','daily-loss'].forEach(syncSlider);
   } catch(e) {}
 }
 
 async function saveRules() {
   const rules = {
-    take_profit_pct:       parseFloat(document.getElementById('r-take-profit').value),
-    stop_loss_pct:         parseFloat(document.getElementById('r-stop-loss').value),
-    max_position_size_pct: parseFloat(document.getElementById('r-pos-size').value),
-    max_open_positions:    parseInt(document.getElementById('r-max-pos').value),
-    min_volume_usdt:       parseFloat(document.getElementById('r-min-volume').value),
-    cooldown_seconds:      parseInt(document.getElementById('r-cooldown').value),
-    order_type:            document.getElementById('r-order-type').value,
-    trailing_stop:         document.getElementById('r-trailing-stop').checked,
-    trailing_stop_pct:     parseFloat(document.getElementById('r-trailing-pct').value),
-    trade_pairs:           document.getElementById('r-pairs').value.split(',').map(p => p.trim()).filter(Boolean),
+    rsi_dip_low:          parseFloat(document.getElementById('r-rsi-low').value),
+    rsi_dip_high:         parseFloat(document.getElementById('r-rsi-high').value),
+    rsi_cross_level:      parseFloat(document.getElementById('r-rsi-cross').value),
+    adx_min:              parseFloat(document.getElementById('r-adx-min').value),
+    atr_stop_mult:        parseFloat(document.getElementById('r-atr-stop').value),
+    atr_tp1_mult:         parseFloat(document.getElementById('r-atr-tp1').value),
+    tp1_exit_pct:         parseFloat(document.getElementById('r-tp1-pct').value),
+    time_stop_candles:    parseInt(document.getElementById('r-time-stop').value),
+    risk_per_trade_pct:   parseFloat(document.getElementById('r-risk-pct').value),
+    max_open_positions:   parseInt(document.getElementById('r-max-pos').value),
+    daily_loss_limit_pct: parseFloat(document.getElementById('r-daily-loss').value),
+    trade_pairs:          document.getElementById('r-pairs').value.split(',').map(p => p.trim()).filter(Boolean),
   };
   try {
     await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });

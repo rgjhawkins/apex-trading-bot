@@ -13,10 +13,6 @@ from typing import Optional
 POSITIONS_FILE = os.path.join(os.path.dirname(__file__), "../../positions.json")
 
 STARTING_CAPITAL = 100.0      # USDT — the budget we trade with
-RISK_PER_TRADE   = 0.01       # 1% of capital per trade
-ATR_STOP_MULT    = 1.5        # stop = entry - (ATR * multiplier)
-TP1_ATR_MULT     = 1.5        # TP1  = entry + (ATR * multiplier)
-TP1_EXIT_PCT     = 0.40       # close 40% at TP1
 MIN_NOTIONAL     = 15.0       # Binance minimum order size (USDT)
 
 
@@ -84,14 +80,19 @@ class PositionManager:
     def capital_available(self) -> float:
         return max(0.0, self.starting_capital - self.capital_deployed)
 
-    def calculate_size(self, entry_price: float, atr: float) -> tuple[float, float, float]:
+    def calculate_size(self, entry_price: float, atr: float, rules: dict = None) -> tuple[float, float, float]:
         """
         Returns (quantity_base, usdt_size, stop_loss_price).
-        Uses fixed-fractional: risk 1% of starting_capital per trade.
+        Uses fixed-fractional: risk N% of starting_capital per trade.
         """
-        stop_loss   = entry_price - (ATR_STOP_MULT * atr)
-        stop_dist   = entry_price - stop_loss           # USDT per unit
-        risk_usdt   = self.starting_capital * RISK_PER_TRADE
+        if rules is None:
+            rules = {}
+        atr_stop_mult = rules.get("atr_stop_mult",      1.5)
+        risk_pct      = rules.get("risk_per_trade_pct", 1.0) / 100.0
+
+        stop_loss   = entry_price - (atr_stop_mult * atr)
+        stop_dist   = entry_price - stop_loss
+        risk_usdt   = self.starting_capital * risk_pct
         usdt_size   = risk_usdt / (stop_dist / entry_price)
 
         # Clamp to available capital
@@ -106,9 +107,14 @@ class PositionManager:
     # ── Position lifecycle ─────────────────────────────────────────
 
     def open_position(self, symbol: str, entry_price: float, quantity: float,
-                      usdt_size: float, atr: float, order_id: str = "") -> Position:
-        stop_loss  = round(entry_price - (ATR_STOP_MULT * atr), 4)
-        tp1_price  = round(entry_price + (TP1_ATR_MULT  * atr), 4)
+                      usdt_size: float, atr: float, order_id: str = "",
+                      rules: dict = None) -> Position:
+        if rules is None:
+            rules = {}
+        atr_stop_mult = rules.get("atr_stop_mult", 1.5)
+        atr_tp1_mult  = rules.get("atr_tp1_mult",  1.5)
+        stop_loss  = round(entry_price - (atr_stop_mult * atr), 4)
+        tp1_price  = round(entry_price + (atr_tp1_mult  * atr), 4)
         pos = Position(
             symbol=symbol,
             entry_price=entry_price,
@@ -122,16 +128,18 @@ class PositionManager:
         self._save()
         return pos
 
-    def hit_tp1(self, symbol: str, exit_price: float, tp1_order_id: str = ""):
-        """Mark TP1 as hit, reduce quantity by 40%."""
+    def hit_tp1(self, symbol: str, exit_price: float, tp1_order_id: str = "",
+                rules: dict = None):
+        """Mark TP1 as hit, reduce position by tp1_exit_pct."""
         pos = self.open.get(symbol)
         if not pos:
             return
-        qty_sold   = round(pos.quantity * TP1_EXIT_PCT, 6)
+        tp1_exit_pct = (rules or {}).get("tp1_exit_pct", 40.0) / 100.0
+        qty_sold   = round(pos.quantity * tp1_exit_pct, 6)
         pnl_usdt   = (exit_price - pos.entry_price) * qty_sold
         pos.tp1_hit      = True
         pos.quantity     = round(pos.quantity - qty_sold, 6)
-        pos.usdt_size    = round(pos.usdt_size * (1 - TP1_EXIT_PCT), 2)
+        pos.usdt_size    = round(pos.usdt_size * (1 - tp1_exit_pct), 2)
         pos.tp1_order_id = tp1_order_id
         self._record_partial(symbol, qty_sold, exit_price, pnl_usdt, "TP1")
         self._save()
