@@ -17,6 +17,9 @@ class BotEngine:
         }
 
     def start(self):
+        if self.client is None:
+            self._add_log("ERROR", "Cannot start: Binance client unavailable")
+            return False
         if self.running:
             return False
         self.running = True

@@ -9,7 +9,12 @@ from datetime import datetime
 app = Flask(__name__)
 CORS(app)
 
-binance = BinanceClient()
+try:
+    binance = BinanceClient()
+except Exception as e:
+    print(f"Warning: Binance client init failed: {e}")
+    binance = None
+
 engine = BotEngine(binance)
 
 
@@ -47,6 +52,15 @@ def index():
 
 @app.route("/api/status")
 def api_status():
+    if binance is None:
+        return jsonify({
+            "connected": False,
+            "testnet": True,
+            "server_time": None,
+            "timestamp": datetime.utcnow().isoformat(),
+            "bot": engine.get_stats(),
+            "error": "Binance client unavailable (geo-restriction or bad keys)",
+        })
     connected = binance.test_connection()
     server_time = binance.get_server_time() if connected else {}
     return jsonify({
