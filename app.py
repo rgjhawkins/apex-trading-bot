@@ -209,8 +209,16 @@ def api_status():
             "bot": eng.get_stats(),
             "error": "Binance client unavailable — add API keys in Settings",
         })
-    connected   = client.test_connection()
-    server_time = client.get_server_time() if connected else {}
+    try:
+        connected   = client.test_connection()
+        server_time = client.get_server_time() if connected else {}
+    except Exception as e:
+        return jsonify({
+            "connected": False, "testnet": client.testnet,
+            "server_time": None, "timestamp": datetime.utcnow().isoformat(),
+            "bot": eng.get_stats(),
+            "error": str(e),
+        })
     return jsonify({
         "connected":   connected,
         "testnet":     client.testnet,

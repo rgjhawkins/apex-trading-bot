@@ -80,6 +80,7 @@ class BotEngine:
     # ── Main loop ──────────────────────────────────────────────────
 
     def _loop(self):
+        rules = load_rules(self.username)   # ensure always defined for sleep calc
         while self.running:
             try:
                 self._reset_daily_halt_if_new_day()
