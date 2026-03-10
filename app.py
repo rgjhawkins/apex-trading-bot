@@ -4,6 +4,7 @@ from flask_cors import CORS
 from src.exchange.client import BinanceClient
 from src.bot.rules import load_rules, save_rules
 from src.bot.engine import BotEngine
+from src.ai.advisor import ai_recommend
 from datetime import datetime
 
 app = Flask(__name__)
@@ -195,6 +196,29 @@ def api_positions():
 @app.route("/api/bot/stats")
 def api_bot_stats():
     return jsonify(engine.get_stats())
+
+
+@app.route("/api/ai-decide", methods=["POST"])
+def ai_decide():
+    if binance is None:
+        return jsonify({"error": "Exchange not connected — cannot fetch market data"}), 400
+    try:
+        current_rules = load_rules()
+        pairs         = current_rules.get("trade_pairs", ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"])
+        rules, reasoning, market_assessment = ai_recommend(
+            binance.client, pairs, current_rules
+        )
+        merged = save_rules({**current_rules, **rules})
+        engine._log("INFO", f"AI decided: {market_assessment}")
+        return jsonify({
+            "rules":             merged,
+            "reasoning":         reasoning,
+            "market_assessment": market_assessment,
+        })
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        return jsonify({"error": f"AI call failed: {e}"}), 500
 
 
 if __name__ == "__main__":

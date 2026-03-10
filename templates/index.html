@@ -436,6 +436,83 @@
   }
   .save-rules-btn:hover { background: rgba(240,185,11,0.2); }
 
+  /* ── AI Decide button ────────────────────────────────── */
+  .btn-ai {
+    width: 100%;
+    padding: 10px;
+    font-family: var(--display);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: none;
+    border-radius: var(--panel-radius);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(135deg, #8B6A00, #F0B90B, #8B6A00);
+    background-size: 200% 100%;
+    color: #000;
+    animation: goldShimmer 3s ease infinite;
+  }
+  @keyframes goldShimmer {
+    0%   { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+  .btn-ai:hover { box-shadow: 0 0 24px rgba(240,185,11,0.5); transform: translateY(-1px); }
+  .btn-ai:disabled {
+    background: var(--muted);
+    color: var(--text-dim);
+    animation: none;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* ── AI Insight panel ────────────────────────────────── */
+  .ai-panel {
+    margin: 10px 14px;
+    border: 1px solid var(--gold-dim);
+    border-radius: var(--panel-radius);
+    background: linear-gradient(135deg, rgba(240,185,11,0.05), rgba(240,185,11,0.02));
+    overflow: hidden;
+    display: none;
+  }
+  .ai-panel.visible { display: block; animation: panelIn 0.3s ease; }
+  @keyframes panelIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .ai-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px;
+    background: rgba(240,185,11,0.08);
+    border-bottom: 1px solid var(--gold-dim);
+  }
+  .ai-panel-title {
+    font-family: var(--display);
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    color: var(--gold);
+  }
+  .ai-panel-close {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+  }
+  .ai-panel-close:hover { color: var(--text); }
+  .ai-market { padding: 8px 10px 4px; font-size: 10px; color: var(--gold); font-style: italic; border-bottom: 1px solid var(--border); }
+  .ai-reasoning { padding: 8px 10px; font-size: 10px; color: var(--text); line-height: 1.6; }
+
   .pairs-input {
     width: 100%;
     background: var(--bg3);
@@ -762,6 +839,7 @@
       <div class="bot-controls">
         <button class="btn btn-start" id="btn-start" onclick="botStart()">▶ Start Bot</button>
         <button class="btn btn-stop" id="btn-stop" onclick="botStop()" disabled>■ Stop Bot</button>
+        <button class="btn btn-ai" id="btn-ai" onclick="aiDecide()">⚡ AI Decide</button>
         <div style="margin-top:12px">
           <div class="bot-stat-row">
             <span class="bot-stat-label">Starting Capital</span>
@@ -805,6 +883,16 @@
         <span class="panel-title">Trading Rules</span>
         <span class="panel-badge">LIVE</span>
       </div>
+      <!-- AI insight panel — shown after AI Decide -->
+      <div class="ai-panel" id="ai-panel">
+        <div class="ai-panel-header">
+          <span class="ai-panel-title">⚡ AI ANALYSIS</span>
+          <button class="ai-panel-close" onclick="document.getElementById('ai-panel').classList.remove('visible')">✕</button>
+        </div>
+        <div class="ai-market" id="ai-market"></div>
+        <div class="ai-reasoning" id="ai-reasoning"></div>
+      </div>
+
       <div class="rules-form">
 
         <!-- ═══ ENTRY FILTERS ═══════════════════════════════ -->
@@ -1818,6 +1906,71 @@ async function saveRules() {
     pollTickers();
     pollOrders();
   } catch(e) { showToast('Save failed'); }
+}
+
+// ── AI Decide ──────────────────────────────────────────────────────
+async function aiDecide() {
+  const btn = document.getElementById('btn-ai');
+  btn.disabled = true;
+  btn.textContent = '⏳ Analysing market...';
+
+  try {
+    const r = await fetch('/api/ai-decide', { method: 'POST' });
+    const d = await r.json();
+
+    if (d.error) {
+      showToast('AI error: ' + d.error);
+      return;
+    }
+
+    // Apply all returned rules to the form (reuse loadRules logic)
+    const rules = d.rules;
+
+    // Always-on sliders
+    const setVal = (id, val) => { const el = document.getElementById(id); if (el && val !== undefined) el.value = val; };
+    setVal('r-rsi-low',    rules.rsi_dip_low);
+    setVal('r-rsi-high',   rules.rsi_dip_high);
+    setVal('r-rsi-cross',  rules.rsi_cross_level);
+    setVal('r-adx-min',    rules.adx_min);
+    setVal('r-atr-stop',   rules.atr_stop_mult);
+    setVal('r-atr-tp1',    rules.atr_tp1_mult);
+    setVal('r-tp1-pct',    rules.tp1_exit_pct);
+    setVal('r-time-stop',  rules.time_stop_candles);
+    setVal('r-risk-pct',   rules.risk_per_trade_pct);
+    setVal('r-max-pos',    rules.max_open_positions);
+    setVal('r-daily-loss', rules.daily_loss_limit_pct);
+
+    // Toggleable rows + their values
+    if (rules.rsi_enabled   !== undefined) setToggle('rsi',  rules.rsi_enabled);
+    if (rules.adx_enabled   !== undefined) setToggle('adx',  rules.adx_enabled);
+    setToggle('volume-spike', rules.volume_spike_enabled);   setVal('r-vol-mult',       rules.volume_spike_mult);
+    setToggle('macd',         rules.macd_filter_enabled);    setVal('r-macd-mode',      rules.macd_mode);
+    setToggle('body',         rules.body_filter_enabled);    setVal('r-body-pct',       rules.body_filter_pct);
+    setToggle('minvol',       rules.min_volume_usdt_enabled);setVal('r-minvol-usdt',    rules.min_volume_usdt);
+    setToggle('spread',       rules.max_spread_enabled);     setVal('r-spread-pct',     rules.max_spread_pct);
+    setToggle('cooldown',     rules.cooldown_enabled);       setVal('r-cooldown-h',     rules.cooldown_candles);
+    setToggle('fixed-stop',   rules.fixed_stop_enabled);    setVal('r-fixed-stop-pct', rules.fixed_stop_pct);
+    setToggle('trail',        rules.trailing_stop_enabled);  setVal('r-trail-pct',      rules.trailing_stop_pct);
+    setToggle('breakeven',    rules.breakeven_stop_enabled);
+    setToggle('fixed-tp',     rules.fixed_tp_enabled);      setVal('r-fixed-tp-pct',   rules.fixed_tp_pct);
+    setToggle('rmult',        rules.r_multiple_tp_enabled);  setVal('r-rmult-val',      rules.r_multiple);
+    if (rules.interval) setVal('r-interval', rules.interval);
+
+    ALL_SLIDERS.forEach(syncSlider);
+
+    // Show AI insight panel
+    document.getElementById('ai-market').textContent   = d.market_assessment;
+    document.getElementById('ai-reasoning').textContent = d.reasoning;
+    document.getElementById('ai-panel').classList.add('visible');
+
+    showToast('AI settings applied');
+    pollLog();
+  } catch(e) {
+    showToast('AI request failed');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⚡ AI Decide';
+  }
 }
 
 // ── Bot Control ────────────────────────────────────────────────────
