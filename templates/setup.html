@@ -50,7 +50,7 @@
   .field { margin-bottom: 14px; }
   .field label { display: block; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
   .field label span { color: var(--text-dim); font-size: 9px; letter-spacing: 0; text-transform: none; }
-  .field input[type=text], .field input[type=password] {
+  .field input[type=text], .field input[type=password], .field input[type=email] {
     width: 100%; background: var(--bg2); border: 1px solid var(--border2);
     border-radius: 3px; padding: 9px 12px; color: var(--text-bright);
     font-family: var(--mono); font-size: 12px; outline: none; transition: border-color 0.15s;
@@ -99,11 +99,16 @@
 
     <form method="post" action="/register">
 
-      <div class="section-title">Admin Account</div>
+      <div class="section-title">Your Account</div>
 
       <div class="field">
-        <label>Username</label>
+        <label>Username <span>(letters and numbers only, min 3 chars)</span></label>
         <input type="text" name="username" autocomplete="username" required autofocus>
+      </div>
+      <div class="field">
+        <label>Email <span>(for trade notifications)</span></label>
+        <input type="email" name="email" autocomplete="email" placeholder="you@example.com">
+        <div class="hint">Optional now — used to send trade alerts in the future.</div>
       </div>
       <div class="field">
         <label>Password <span>(min 8 characters)</span></label>

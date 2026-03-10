@@ -1,7 +1,6 @@
 """
-Auth & API key manager — multi-user.
-Each user has their own credentials and API keys stored in config.json.
-Environment variables (ADMIN_USERNAME/PASSWORD) serve as a Railway fallback.
+Auth & API key manager — multi-user, no special admin.
+All credentials and keys are stored per-user in config.json.
 """
 
 import json
@@ -33,16 +32,15 @@ def save_config(config: dict):
 # ── Registration ───────────────────────────────────────────────────
 
 def is_username_taken(username: str) -> bool:
-    if os.environ.get("ADMIN_USERNAME") == username:
-        return True
     return any(u["username"] == username for u in load_config().get("users", []))
 
 
-def register_user(username: str, password: str):
+def register_user(username: str, password: str, email: str = ""):
     config = load_config()
     config.setdefault("users", []).append({
         "username":      username,
         "password_hash": generate_password_hash(password),
+        "email":         email,
         "api_keys": {
             "binance_api_key":    "",
             "binance_secret_key": "",
@@ -56,10 +54,6 @@ def register_user(username: str, password: str):
 # ── Auth ───────────────────────────────────────────────────────────
 
 def verify_credentials(username: str, password: str) -> bool:
-    env_user = os.environ.get("ADMIN_USERNAME")
-    env_pass = os.environ.get("ADMIN_PASSWORD")
-    if env_user and env_pass and username == env_user and password == env_pass:
-        return True
     for user in load_config().get("users", []):
         if user["username"] == username:
             return check_password_hash(user["password_hash"], password)
@@ -78,15 +72,6 @@ def change_password(username: str, new_password: str):
 # ── API keys (per-user) ────────────────────────────────────────────
 
 def get_api_keys(username: str) -> dict:
-    """Return API keys for the given user. Env vars are fallback for Railway admin."""
-    env_user = os.environ.get("ADMIN_USERNAME")
-    if env_user and username == env_user:
-        return {
-            "binance_api_key":    os.environ.get("BINANCE_TESTNET_API_KEY", ""),
-            "binance_secret_key": os.environ.get("BINANCE_TESTNET_SECRET_KEY", ""),
-            "anthropic_api_key":  os.environ.get("ANTHROPIC_API_KEY", ""),
-            "use_testnet":        os.environ.get("USE_TESTNET", "true").lower() == "true",
-        }
     for user in load_config().get("users", []):
         if user["username"] == username:
             k = user.get("api_keys", {})

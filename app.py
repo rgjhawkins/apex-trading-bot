@@ -25,6 +25,8 @@ _clients: dict[str, BinanceClient | None] = {}
 
 def _make_client(username: str) -> BinanceClient | None:
     keys = get_api_keys(username)
+    if not keys["binance_api_key"]:
+        return None
     if keys.get("anthropic_api_key"):
         os.environ["ANTHROPIC_API_KEY"] = keys["anthropic_api_key"]
     try:
@@ -121,7 +123,8 @@ def register():
         elif len(password) < 8:
             error = "Password must be at least 8 characters"
         else:
-            register_user(username, password)
+            email = request.form.get("email", "").strip()
+            register_user(username, password, email)
             keys = {
                 "binance_api_key":    request.form.get("binance_api_key",    "").strip(),
                 "binance_secret_key": request.form.get("binance_secret_key", "").strip(),
