@@ -17,6 +17,34 @@ CORS(app)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "apex-change-this-in-production")
 
 
+# ── Seed user from env vars (survives Railway redeploys) ─────────────
+
+def _seed_user_from_env():
+    """
+    If APEX_USERNAME + APEX_PASSWORD are set, ensure that user exists in
+    config.json (creates them on a fresh deploy, skips if already present).
+    API keys are also seeded from env vars if provided.
+    """
+    username = os.environ.get("APEX_USERNAME", "").strip()
+    password = os.environ.get("APEX_PASSWORD", "").strip()
+    if not username or not password:
+        return
+    if is_username_taken(username):
+        return
+    email = os.environ.get("APEX_EMAIL", "").strip()
+    register_user(username, password, email)
+    keys = {
+        "binance_api_key":    os.environ.get("APEX_BINANCE_API_KEY",    ""),
+        "binance_secret_key": os.environ.get("APEX_BINANCE_SECRET_KEY", ""),
+        "anthropic_api_key":  os.environ.get("APEX_ANTHROPIC_API_KEY",  ""),
+        "use_testnet":        os.environ.get("APEX_USE_TESTNET", "true").lower() != "false",
+    }
+    save_api_keys(username, keys)
+    print(f"[startup] Seeded user '{username}' from environment variables")
+
+_seed_user_from_env()
+
+
 # ── Per-user engine registry ──────────────────────────────────────
 
 _engines: dict[str, BotEngine] = {}
