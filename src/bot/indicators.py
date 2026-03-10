@@ -188,9 +188,10 @@ def get_daytrading_signal(df: pd.DataFrame, rules: dict = None) -> dict:
     price_rise_pct = (curr_close - prev_close) / prev_close * 100
 
     checks = {
-        "price_breakout": price_rise_pct >= rules.get("dt_price_rise_pct", 2.0),
-        "volume_confirm": float(c["volume_ratio"]) >= rules.get("dt_volume_mult", 1.5),
+        "price_breakout": price_rise_pct >= rules.get("dt_price_rise_pct", 1.5),
+        "volume_confirm": float(c["volume_ratio"]) >= rules.get("dt_volume_mult", 2.0),
         "above_ema20":    curr_close > float(c["ema20"]),
+        "rsi_not_overbought": float(c["rsi"]) <= rules.get("dt_max_rsi", 72.0),
     }
 
     return {

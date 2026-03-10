@@ -385,23 +385,40 @@ class BotEngine:
         pos   = self.pm.open[symbol]
         close = float(df.iloc[-2]["close"])
 
-        # Update trailing high and compute effective stop
+        # Update trailing high
         if close > pos.trail_high:
             pos.trail_high = close
-        trail_pct      = rules.get("dt_trailing_stop_pct", 1.0)
-        trail_stop     = pos.trail_high * (1 - trail_pct / 100)
+
+        trail_pct  = rules.get("dt_trailing_stop_pct", 0.75)
+        trail_stop = pos.trail_high * (1 - trail_pct / 100)
+
+        # Breakeven stop — once up dt_breakeven_pct%, slide stop to entry
+        breakeven_pct = rules.get("dt_breakeven_pct", 0.5)
+        if not pos.breakeven_active:
+            if close >= pos.entry_price * (1 + breakeven_pct / 100):
+                pos.stop_loss        = pos.entry_price
+                pos.breakeven_active = True
+                self._log("INFO", f"{symbol} [DT] breakeven stop activated at ${pos.entry_price:.4f}")
+
         effective_stop = max(pos.stop_loss, trail_stop)
 
         # Take profit — exit full position
-        tp_pct    = rules.get("dt_take_profit_pct", 3.0)
-        tp_price  = pos.entry_price * (1 + tp_pct / 100)
+        tp_pct   = rules.get("dt_take_profit_pct", 2.0)
+        tp_price = pos.entry_price * (1 + tp_pct / 100)
         if close >= tp_price:
             self._exit(symbol, close, "TAKE_PROFIT", rules)
             return
 
-        # Trailing stop hit
+        # Trailing / breakeven stop hit
         if close <= effective_stop:
-            self._exit(symbol, close, "TRAIL_STOP", rules)
+            reason = "BREAKEVEN" if pos.breakeven_active and close <= pos.entry_price else "TRAIL_STOP"
+            self._exit(symbol, close, reason, rules)
+            return
+
+        # Time stop — close losing trade after N candles
+        time_stop = rules.get("dt_time_stop_candles", 20)
+        if pos.candles_open >= time_stop and close < pos.entry_price:
+            self._exit(symbol, close, "TIME_STOP", rules)
             return
 
         # Heartbeat every 4 candles

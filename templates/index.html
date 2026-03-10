@@ -1440,8 +1440,15 @@
               <div class="ctrl-row">
                 <span class="ctrl-label">Volume Multiple</span>
                 <div class="ctrl-slider-wrap">
-                  <input type="range" id="r-dt-vol-mult" min="1" max="3" step="0.1" value="1.5" oninput="syncSlider('dt-vol-mult')">
-                  <span class="ctrl-val" id="sv-dt-vol-mult">1.5×</span>
+                  <input type="range" id="r-dt-vol-mult" min="1" max="3" step="0.1" value="2" oninput="syncSlider('dt-vol-mult')">
+                  <span class="ctrl-val" id="sv-dt-vol-mult">2.0×</span>
+                </div>
+              </div>
+              <div class="ctrl-row">
+                <span class="ctrl-label">Max RSI (entry)</span>
+                <div class="ctrl-slider-wrap">
+                  <input type="range" id="r-dt-max-rsi" min="55" max="85" step="1" value="72" oninput="syncSlider('dt-max-rsi')">
+                  <span class="ctrl-val" id="sv-dt-max-rsi">72</span>
                 </div>
               </div>
             </div>
@@ -1466,8 +1473,22 @@
               <div class="ctrl-row">
                 <span class="ctrl-label">Take Profit %</span>
                 <div class="ctrl-slider-wrap">
-                  <input type="range" id="r-dt-tp-pct" min="0.5" max="15" step="0.25" value="3" oninput="syncSlider('dt-tp-pct')">
-                  <span class="ctrl-val" id="sv-dt-tp-pct">3.0%</span>
+                  <input type="range" id="r-dt-tp-pct" min="0.5" max="15" step="0.25" value="2" oninput="syncSlider('dt-tp-pct')">
+                  <span class="ctrl-val" id="sv-dt-tp-pct">2.0%</span>
+                </div>
+              </div>
+              <div class="ctrl-row">
+                <span class="ctrl-label">Breakeven at %</span>
+                <div class="ctrl-slider-wrap">
+                  <input type="range" id="r-dt-breakeven" min="0.1" max="2" step="0.1" value="0.5" oninput="syncSlider('dt-breakeven')">
+                  <span class="ctrl-val" id="sv-dt-breakeven">0.5%</span>
+                </div>
+              </div>
+              <div class="ctrl-row">
+                <span class="ctrl-label">Time Stop (candles)</span>
+                <div class="ctrl-slider-wrap">
+                  <input type="range" id="r-dt-time-stop" min="5" max="60" step="5" value="20" oninput="syncSlider('dt-time-stop')">
+                  <span class="ctrl-val" id="sv-dt-time-stop">20</span>
                 </div>
               </div>
             </div>
@@ -1750,7 +1771,7 @@ function syncSlider(id) {
   const multUnit  = ['atr-stop', 'atr-tp1', 'vol-mult', 'dt-vol-mult'];
   const rUnit     = ['rmult-val'];
   const hourUnit  = ['time-stop', 'cooldown-h'];
-  const plainUnit = ['max-pos', 'rsi-cross', 'adx-min', 'dt-lookback'];
+  const plainUnit = ['max-pos', 'rsi-cross', 'adx-min', 'dt-lookback', 'dt-max-rsi', 'dt-time-stop'];
   const dec2Unit  = ['spread-pct'];
   if (plainUnit.includes(id)) {
     label.textContent = val;
@@ -2126,11 +2147,14 @@ async function loadRules() {
     document.getElementById('r-rmult-val').value  = d.r_multiple           ?? 2.0;
 
     // Day trading params
-    document.getElementById('r-dt-rise-pct').value  = d.dt_price_rise_pct    ?? 2.0;
-    document.getElementById('r-dt-lookback').value  = d.dt_lookback_candles  ?? 3;
-    document.getElementById('r-dt-vol-mult').value  = d.dt_volume_mult       ?? 1.5;
-    document.getElementById('r-dt-trail-pct').value = d.dt_trailing_stop_pct ?? 1.0;
-    document.getElementById('r-dt-tp-pct').value    = d.dt_take_profit_pct   ?? 3.0;
+    document.getElementById('r-dt-rise-pct').value   = d.dt_price_rise_pct    ?? 1.5;
+    document.getElementById('r-dt-lookback').value   = d.dt_lookback_candles  ?? 5;
+    document.getElementById('r-dt-vol-mult').value   = d.dt_volume_mult       ?? 2.0;
+    document.getElementById('r-dt-max-rsi').value    = d.dt_max_rsi           ?? 72;
+    document.getElementById('r-dt-trail-pct').value  = d.dt_trailing_stop_pct ?? 0.75;
+    document.getElementById('r-dt-tp-pct').value     = d.dt_take_profit_pct   ?? 2.0;
+    document.getElementById('r-dt-breakeven').value  = d.dt_breakeven_pct     ?? 0.5;
+    document.getElementById('r-dt-time-stop').value  = d.dt_time_stop_candles ?? 20;
 
     setStrategy(d.strategy || 'momentum');
     ALL_SLIDERS.forEach(syncSlider);
@@ -2189,8 +2213,11 @@ async function saveRules() {
     dt_price_rise_pct:      f('r-dt-rise-pct'),
     dt_lookback_candles:    i('r-dt-lookback'),
     dt_volume_mult:         f('r-dt-vol-mult'),
+    dt_max_rsi:             f('r-dt-max-rsi'),
     dt_trailing_stop_pct:   f('r-dt-trail-pct'),
     dt_take_profit_pct:     f('r-dt-tp-pct'),
+    dt_breakeven_pct:       f('r-dt-breakeven'),
+    dt_time_stop_candles:   i('r-dt-time-stop'),
   };
   try {
     const res = await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
@@ -2358,8 +2385,10 @@ const DEFAULTS = {
   risk_per_trade_pct: 1.0,     max_open_positions: 3,  daily_loss_limit_pct: 3.0,
   trade_pairs: ['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT'],
   interval: '1h',
-  dt_price_rise_pct: 2.0,  dt_lookback_candles: 3,
-  dt_volume_mult: 1.5,      dt_trailing_stop_pct: 1.0,  dt_take_profit_pct: 3.0,
+  dt_price_rise_pct: 1.5,  dt_lookback_candles: 5,
+  dt_volume_mult: 2.0,     dt_max_rsi: 72,
+  dt_trailing_stop_pct: 0.75, dt_take_profit_pct: 2.0,
+  dt_breakeven_pct: 0.5,   dt_time_stop_candles: 20,
 };
 
 async function resetDefaults() {
@@ -2385,9 +2414,10 @@ async function resetDefaults() {
   setToggle('breakeven', d.breakeven_stop_enabled);
   setToggle('fixed-tp', d.fixed_tp_enabled);          set('r-fixed-tp-pct', d.fixed_tp_pct);
   setToggle('rmult', d.r_multiple_tp_enabled);        set('r-rmult-val', d.r_multiple);
-  set('r-dt-rise-pct', d.dt_price_rise_pct);  set('r-dt-lookback', d.dt_lookback_candles);
-  set('r-dt-vol-mult', d.dt_volume_mult);      set('r-dt-trail-pct', d.dt_trailing_stop_pct);
-  set('r-dt-tp-pct', d.dt_take_profit_pct);
+  set('r-dt-rise-pct', d.dt_price_rise_pct);    set('r-dt-lookback', d.dt_lookback_candles);
+  set('r-dt-vol-mult', d.dt_volume_mult);        set('r-dt-max-rsi', d.dt_max_rsi);
+  set('r-dt-trail-pct', d.dt_trailing_stop_pct); set('r-dt-tp-pct', d.dt_take_profit_pct);
+  set('r-dt-breakeven', d.dt_breakeven_pct);     set('r-dt-time-stop', d.dt_time_stop_candles);
   setStrategy(d.strategy);
   ALL_SLIDERS.forEach(syncSlider);
   await saveRules();
@@ -2438,7 +2468,8 @@ const ALL_SLIDERS = [
   'rsi-cross','adx-min','atr-stop','atr-tp1','tp1-pct','time-stop',
   'risk-pct','max-pos','daily-loss','vol-mult','body-pct','spread-pct',
   'cooldown-h','fixed-stop-pct','trail-pct','fixed-tp-pct','rmult-val',
-  'dt-rise-pct','dt-lookback','dt-vol-mult','dt-trail-pct','dt-tp-pct',
+  'dt-rise-pct','dt-lookback','dt-vol-mult','dt-max-rsi','dt-trail-pct',
+  'dt-tp-pct','dt-breakeven','dt-time-stop',
 ];
 
 async function init() {

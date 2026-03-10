@@ -351,8 +351,11 @@ _RULE_LABELS = {
     "dt_price_rise_pct":      "DT price rise %",
     "dt_lookback_candles":    "DT lookback candles",
     "dt_volume_mult":         "DT volume mult",
+    "dt_max_rsi":             "DT max RSI",
     "dt_trailing_stop_pct":   "DT trailing stop %",
     "dt_take_profit_pct":     "DT take profit %",
+    "dt_breakeven_pct":       "DT breakeven %",
+    "dt_time_stop_candles":   "DT time stop candles",
 }
 
 def _fmt(val):
