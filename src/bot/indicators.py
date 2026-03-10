@@ -125,14 +125,18 @@ def get_signal(df: pd.DataFrame, rules: dict = None) -> dict:
     c  = df.iloc[-2]   # last closed candle
     c1 = df.iloc[-3]   # previous candle (for RSI crossover)
 
-    # ── Core checks (always active) ────────────────────────────────
+    # ── Core checks (EMA trend stack always active) ────────────────
     checks = {
         "trend_aligned":     bool(c["ema20"] > c["ema50"] > c["ema200"]),
-        "adx_ok":            bool(c["adx"] > adx_min),
-        "rsi_dipped":        bool(rsi_low <= c1["rsi"] <= rsi_high),
-        "rsi_cross":         bool(c1["rsi"] < rsi_cross and c["rsi"] >= rsi_cross),
         "price_above_ema50": bool(c["close"] > c["ema50"]),
     }
+
+    if rules.get("rsi_enabled", True):
+        checks["rsi_dipped"] = bool(rsi_low <= c1["rsi"] <= rsi_high)
+        checks["rsi_cross"]  = bool(c1["rsi"] < rsi_cross and c["rsi"] >= rsi_cross)
+
+    if rules.get("adx_enabled", True):
+        checks["adx_ok"] = bool(c["adx"] > adx_min)
 
     # ── Optional entry filters ─────────────────────────────────────
     if rules.get("volume_spike_enabled", False):

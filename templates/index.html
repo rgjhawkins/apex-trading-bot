@@ -810,13 +810,16 @@
         <!-- ═══ ENTRY FILTERS ═══════════════════════════════ -->
         <div class="rule-section-title">Entry Filters</div>
 
-        <!-- RSI + EMA trend — always on, no toggle -->
-        <div class="toggle-row always-on">
+        <!-- RSI + EMA trend — toggleable -->
+        <div class="toggle-row active" id="tr-rsi">
           <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-rsi-enabled" onchange="toggleRow('rsi')" checked>
+              <span class="toggle-track"></span>
+            </label>
             <span class="toggle-name">RSI Momentum Recovery</span>
-            <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
           </div>
-          <div class="toggle-desc">The core signal. RSI must dip into the zone then cross back up — indicating a pullback has ended and momentum is recovering. Pair this with the EMA trend stack being bullish (20 &gt; 50 &gt; 200).</div>
+          <div class="toggle-desc">The core signal. RSI must dip into the zone then cross back up — indicating a pullback has ended and momentum is recovering. Disable if you want to rely purely on MACD or volume signals instead.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">RSI Dip Low</span>
@@ -836,13 +839,16 @@
           </div>
         </div>
 
-        <!-- ADX — always on -->
-        <div class="toggle-row always-on">
+        <!-- ADX — toggleable -->
+        <div class="toggle-row active" id="tr-adx">
           <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-adx-enabled" onchange="toggleRow('adx')" checked>
+              <span class="toggle-track"></span>
+            </label>
             <span class="toggle-name">ADX Trend Strength</span>
-            <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
           </div>
-          <div class="toggle-desc">ADX measures how strongly the market is trending. Below 20 means it's choppy sideways — the bot skips trades. Above 25 is a healthy trend.</div>
+          <div class="toggle-desc">ADX measures how strongly the market is trending. Below 20 means it's choppy sideways — the bot skips trades. Disable if you want to trade ranging markets or rely on MACD direction instead.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Minimum ADX</span>
@@ -1693,6 +1699,8 @@ async function loadRules() {
     document.getElementById('r-pairs').value      = (d.trade_pairs || []).join(',');
 
     // Toggle rows — enabled state + values
+    setToggle('rsi',  d.rsi_enabled !== false);   // default true
+    setToggle('adx',  d.adx_enabled !== false);   // default true
     setToggle('volume-spike', d.volume_spike_enabled);
     document.getElementById('r-vol-mult').value   = d.volume_spike_mult    ?? 1.5;
 
@@ -1740,9 +1748,11 @@ async function saveRules() {
 
   const rules = {
     // Core entry
+    rsi_enabled:            b('r-rsi-enabled'),
     rsi_dip_low:            f('r-rsi-low'),
     rsi_dip_high:           f('r-rsi-high'),
     rsi_cross_level:        f('r-rsi-cross'),
+    adx_enabled:            b('r-adx-enabled'),
     adx_min:                f('r-adx-min'),
     // Optional entry filters
     volume_spike_enabled:   b('r-volume-spike-enabled'),

@@ -12,9 +12,11 @@ DEFAULT_RULES = {
     "risk_per_trade_pct":       1.0,       # % of $100 capital risked per trade
 
     # ── Entry filters ──────────────────────────────────────────────
+    "rsi_enabled":              True,      # use RSI dip + cross signal
     "rsi_dip_low":              42.0,
     "rsi_dip_high":             55.0,
     "rsi_cross_level":          50.0,
+    "adx_enabled":              True,      # require minimum ADX trend strength
     "adx_min":                  20.0,
 
     "volume_spike_enabled":     False,     # require volume spike on entry candle
