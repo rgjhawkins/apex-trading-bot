@@ -386,12 +386,24 @@
   .ctrl-label {
     font-size: 9px;
     color: var(--text-dim);
-    flex: 1;
+    flex: 0 0 90px;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
-  .ctrl-slider-wrap { display: flex; align-items: center; gap: 6px; flex: 1; }
-  .ctrl-val { font-size: 11px; color: var(--gold); width: 40px; text-align: right; flex-shrink: 0; }
+  .ctrl-slider-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .ctrl-val {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--gold);
+    min-width: 52px;
+    text-align: right;
+    flex-shrink: 0;
+    background: var(--gold-glow);
+    border: 1px solid rgba(240,185,11,0.2);
+    border-radius: 3px;
+    padding: 1px 5px;
+    letter-spacing: 0.5px;
+  }
   .ctrl-num {
     width: 70px;
     background: var(--bg3);
