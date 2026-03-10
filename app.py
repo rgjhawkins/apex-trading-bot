@@ -347,6 +347,12 @@ _RULE_LABELS = {
     "daily_loss_limit_pct":   "Daily loss limit %",
     "trade_pairs":            "Trade pairs",
     "interval":               "Interval",
+    "strategy":               "Strategy",
+    "dt_price_rise_pct":      "DT price rise %",
+    "dt_lookback_candles":    "DT lookback candles",
+    "dt_volume_mult":         "DT volume mult",
+    "dt_trailing_stop_pct":   "DT trailing stop %",
+    "dt_take_profit_pct":     "DT take profit %",
 }
 
 def _fmt(val):

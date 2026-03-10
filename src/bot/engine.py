@@ -8,7 +8,7 @@ import threading
 import time
 from datetime import datetime, timedelta, timezone
 
-from src.bot.indicators import klines_to_df, compute_indicators, get_signal
+from src.bot.indicators import klines_to_df, compute_indicators, get_signal, get_daytrading_signal
 from src.bot.position_manager import PositionManager, MIN_NOTIONAL
 from src.bot.rules import load_rules
 
@@ -115,25 +115,29 @@ class BotEngine:
             self.stats["next_tick_at"] = (datetime.utcnow() + timedelta(seconds=sleep_s)).isoformat()
             time.sleep(sleep_s)
 
-    # ── Per-pair processing ────────────────────────────────────────
+    # ── Per-pair routing ───────────────────────────────────────────
 
     def _process_pair(self, symbol: str, rules: dict, interval: str = "1h"):
-        # Fetch & compute indicators
+        if rules.get("strategy", "momentum") == "daytrading":
+            self._process_pair_daytrading(symbol, rules, interval)
+        else:
+            self._process_pair_momentum(symbol, rules, interval)
+
+    # ── Momentum strategy ──────────────────────────────────────────
+
+    def _process_pair_momentum(self, symbol: str, rules: dict, interval: str = "1h"):
         raw = self.client.client.get_klines(symbol=symbol, interval=interval, limit=KLINE_LIMIT)
         df  = compute_indicators(klines_to_df(raw))
         if len(df) < 3:
             return
 
-        # ── Monitor existing position first ────────────────────────
         if symbol in self.pm.open:
             self._monitor_position(symbol, df, rules)
             return
 
-        # ── Pre-signal pair-level filters ──────────────────────────
-
         # 24h volume filter
         if rules.get("min_volume_usdt_enabled", False):
-            ticker = self.client.client.get_ticker(symbol=symbol)
+            ticker  = self.client.client.get_ticker(symbol=symbol)
             vol_24h = float(ticker.get("quoteVolume", 0))
             min_vol = rules.get("min_volume_usdt", 5_000_000.0)
             if vol_24h < min_vol:
@@ -142,9 +146,9 @@ class BotEngine:
 
         # Spread filter
         if rules.get("max_spread_enabled", False):
-            book = self.client.client.get_order_book(symbol=symbol, limit=1)
-            bid  = float(book["bids"][0][0])
-            ask  = float(book["asks"][0][0])
+            book       = self.client.client.get_order_book(symbol=symbol, limit=1)
+            bid        = float(book["bids"][0][0])
+            ask        = float(book["asks"][0][0])
             spread_pct = (ask - bid) / ((bid + ask) / 2) * 100
             if spread_pct > rules.get("max_spread_pct", 0.1):
                 self._log("INFO", f"{symbol} — skip: spread {spread_pct:.3f}%")
@@ -158,14 +162,12 @@ class BotEngine:
                 self._log("INFO", f"{symbol} — cooldown: {remaining} candles remaining")
                 return
 
-        # ── Signal evaluation (only on fresh candle) ───────────────
         last_closed = int(raw[-2][0])
         if self._last_candle_time.get(symbol) == last_closed:
             return
         self._last_candle_time[symbol] = last_closed
 
         result = get_signal(df, rules)
-
         if not result["signal"]:
             failed = [k for k, v in result.get("checks", {}).items() if not v]
             if failed:
@@ -177,6 +179,58 @@ class BotEngine:
             return
 
         self._enter(symbol, result, rules)
+
+    # ── Day trading strategy ───────────────────────────────────────
+
+    def _process_pair_daytrading(self, symbol: str, rules: dict, interval: str = "1h"):
+        raw = self.client.client.get_klines(symbol=symbol, interval=interval, limit=KLINE_LIMIT)
+        df  = compute_indicators(klines_to_df(raw))
+        if len(df) < 3:
+            return
+
+        if symbol in self.pm.open:
+            pos = self.pm.open[symbol]
+            if pos.strategy == "daytrading":
+                self._monitor_position_daytrading(symbol, df, rules)
+            else:
+                self._monitor_position(symbol, df, rules)
+            return
+
+        # Spread filter (shared)
+        if rules.get("max_spread_enabled", False):
+            book       = self.client.client.get_order_book(symbol=symbol, limit=1)
+            bid        = float(book["bids"][0][0])
+            ask        = float(book["asks"][0][0])
+            spread_pct = (ask - bid) / ((bid + ask) / 2) * 100
+            if spread_pct > rules.get("max_spread_pct", 0.1):
+                self._log("INFO", f"{symbol} — skip: spread {spread_pct:.3f}%")
+                return
+
+        # Cooldown (shared)
+        if rules.get("cooldown_enabled", False):
+            expires = self._cooldown_until.get(symbol, 0)
+            if self._global_candle_count < expires:
+                remaining = expires - self._global_candle_count
+                self._log("INFO", f"{symbol} — cooldown: {remaining} candles remaining")
+                return
+
+        last_closed = int(raw[-2][0])
+        if self._last_candle_time.get(symbol) == last_closed:
+            return
+        self._last_candle_time[symbol] = last_closed
+
+        result = get_daytrading_signal(df, rules)
+        if not result["signal"]:
+            failed = [k for k, v in result.get("checks", {}).items() if not v]
+            if failed:
+                self._log("INFO", f"{symbol} — no signal: {', '.join(failed)}")
+            return
+
+        if len(self.pm.open) >= rules.get("max_open_positions", 3):
+            self._log("INFO", f"{symbol} — signal fired but max positions reached")
+            return
+
+        self._enter_daytrading(symbol, result, rules)
 
     # ── Entry ──────────────────────────────────────────────────────
 
@@ -220,6 +274,41 @@ class BotEngine:
             f"BUY {symbol} | qty={qty} | entry=${pos.entry_price:.4f} "
             f"| stop=${pos.stop_loss:.4f} | TP1=${pos.tp1_price:.4f} "
             f"| size=${usdt_size:.2f} | RSI={signal['rsi']:.1f} ADX={signal['adx']:.1f}"
+        )
+
+    # ── Day-trading entry ──────────────────────────────────────────
+
+    def _enter_daytrading(self, symbol: str, signal: dict, rules: dict):
+        entry_price    = signal["close"]
+        trail_pct      = rules.get("dt_trailing_stop_pct", 1.0)
+        tp_pct         = rules.get("dt_take_profit_pct",   3.0)
+        stop_loss      = round(entry_price * (1 - trail_pct / 100), 4)
+        tp_price       = round(entry_price * (1 + tp_pct   / 100), 4)
+
+        qty, usdt_size, _ = self.pm.calculate_size(
+            entry_price, signal["atr"], rules, stop_override=stop_loss
+        )
+        if qty <= 0 or usdt_size < MIN_NOTIONAL:
+            self._log("INFO", f"{symbol} — signal fired but position too small (${usdt_size:.2f})")
+            return
+
+        try:
+            order      = self.client.client.order_market_buy(symbol=symbol, quantity=qty)
+            fills      = order.get("fills", [])
+            fill_price = float(fills[0]["price"]) if fills else entry_price
+        except Exception as e:
+            self._log("ERROR", f"{symbol} — buy order failed: {e}")
+            return
+
+        pos = self.pm.open_position(
+            symbol=symbol, entry_price=fill_price, quantity=qty,
+            usdt_size=usdt_size, stop_loss=stop_loss, tp1_price=tp_price,
+            rules=rules, strategy="daytrading",
+        )
+        self._log("TRADE",
+            f"BUY {symbol} [DAY TRADE] | qty={qty} | entry=${fill_price:.4f} "
+            f"| stop=${stop_loss:.4f} ({trail_pct}% trail) | TP=${tp_price:.4f} ({tp_pct:.1f}%) "
+            f"| size=${usdt_size:.2f} | rise={signal['price_rise_pct']:+.2f}%"
         )
 
     # ── Position monitoring ────────────────────────────────────────
@@ -290,6 +379,37 @@ class BotEngine:
             self._log("INFO",
                 f"{symbol} open {pos.candles_open}h | ${close:.4f} | "
                 f"P&L {upnl:+.2f}% | stop=${effective_stop:.4f}"
+            )
+
+    def _monitor_position_daytrading(self, symbol: str, df, rules: dict):
+        pos   = self.pm.open[symbol]
+        close = float(df.iloc[-2]["close"])
+
+        # Update trailing high and compute effective stop
+        if close > pos.trail_high:
+            pos.trail_high = close
+        trail_pct      = rules.get("dt_trailing_stop_pct", 1.0)
+        trail_stop     = pos.trail_high * (1 - trail_pct / 100)
+        effective_stop = max(pos.stop_loss, trail_stop)
+
+        # Take profit — exit full position
+        tp_pct    = rules.get("dt_take_profit_pct", 3.0)
+        tp_price  = pos.entry_price * (1 + tp_pct / 100)
+        if close >= tp_price:
+            self._exit(symbol, close, "TAKE_PROFIT", rules)
+            return
+
+        # Trailing stop hit
+        if close <= effective_stop:
+            self._exit(symbol, close, "TRAIL_STOP", rules)
+            return
+
+        # Heartbeat every 4 candles
+        if pos.candles_open % 4 == 0:
+            upnl = (close - pos.entry_price) / pos.entry_price * 100
+            self._log("INFO",
+                f"{symbol} [DT] open {pos.candles_open} candles | ${close:.4f} "
+                f"| P&L {upnl:+.2f}% | stop=${effective_stop:.4f} | TP=${tp_price:.4f}"
             )
 
     def _exit(self, symbol: str, price: float, reason: str, rules: dict = None):

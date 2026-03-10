@@ -18,6 +18,7 @@ class Position:
     stop_loss:        float
     tp1_price:        float
     tp1_hit:          bool  = False
+    strategy:         str   = "momentum"
     entry_time:       str   = field(default_factory=lambda: datetime.utcnow().isoformat())
     candles_open:     int   = 0
     order_id:         str   = ""
@@ -73,21 +74,25 @@ class PositionManager:
     # ── Sizing ─────────────────────────────────────────────────────
 
     def calculate_size(self, entry_price: float, atr: float,
-                       rules: dict = None) -> tuple[float, float, float]:
-        rules         = rules or {}
-        atr_stop_mult = rules.get("atr_stop_mult", 1.5)
-        risk_pct      = rules.get("risk_per_trade_pct", 1.0) / 100.0
+                       rules: dict = None,
+                       stop_override: float = None) -> tuple[float, float, float]:
+        rules    = rules or {}
+        risk_pct = rules.get("risk_per_trade_pct", 1.0) / 100.0
 
-        # ATR stop (always active)
-        atr_stop = entry_price - (atr_stop_mult * atr)
-
-        # Fixed % stop — use tightest (highest price = smallest loss if hit)
-        if rules.get("fixed_stop_enabled", False):
-            fixed_pct  = rules.get("fixed_stop_pct", 3.0) / 100.0
-            fixed_stop = entry_price * (1 - fixed_pct)
-            stop_loss  = max(atr_stop, fixed_stop)
+        if stop_override is not None:
+            stop_loss = stop_override
         else:
-            stop_loss = atr_stop
+            # ATR stop (always active)
+            atr_stop_mult = rules.get("atr_stop_mult", 1.5)
+            atr_stop      = entry_price - (atr_stop_mult * atr)
+
+            # Fixed % stop — use tightest
+            if rules.get("fixed_stop_enabled", False):
+                fixed_pct  = rules.get("fixed_stop_pct", 3.0) / 100.0
+                fixed_stop = entry_price * (1 - fixed_pct)
+                stop_loss  = max(atr_stop, fixed_stop)
+            else:
+                stop_loss = atr_stop
 
         stop_dist = entry_price - stop_loss
         if stop_dist <= 0:
@@ -106,7 +111,8 @@ class PositionManager:
 
     def open_position(self, symbol: str, entry_price: float, quantity: float,
                       usdt_size: float, stop_loss: float, tp1_price: float,
-                      order_id: str = "", rules: dict = None) -> Position:
+                      order_id: str = "", rules: dict = None,
+                      strategy: str = "momentum") -> Position:
         initial_risk = max(entry_price - stop_loss, 0.0)
         pos = Position(
             symbol=symbol,
@@ -118,6 +124,7 @@ class PositionManager:
             order_id=order_id,
             trail_high=entry_price,
             initial_risk=initial_risk,
+            strategy=strategy,
         )
         self.open[symbol] = pos
         self._save()

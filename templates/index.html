@@ -459,6 +459,21 @@
   }
   .reset-defaults-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
 
+  /* ── Strategy tabs ───────────────────────────────────── */
+  .strat-tabs {
+    display: flex; margin: 0 0 10px; border: 1px solid var(--border2);
+    border-radius: 3px; overflow: hidden;
+  }
+  .strat-tab {
+    flex: 1; padding: 8px 0; background: var(--bg2); border: none;
+    color: var(--text-dim); font-family: var(--display); font-size: 9px;
+    font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .strat-tab:first-child { border-right: 1px solid var(--border2); }
+  .strat-tab.active { background: var(--gold); color: #000; }
+  .strat-tab:not(.active):hover { color: var(--text); background: var(--border); }
+
   /* ── AI Decide button ────────────────────────────────── */
   .btn-ai {
     width: 100%;
@@ -1039,6 +1054,10 @@
         <span class="panel-title">Trading Rules</span>
         <span class="panel-badge">LIVE</span>
       </div>
+      <div class="strat-tabs">
+        <button class="strat-tab active" id="tab-strat-momentum" onclick="setStrategy('momentum')">Momentum</button>
+        <button class="strat-tab" id="tab-strat-daytrading" onclick="setStrategy('daytrading')">Day Trade</button>
+      </div>
       <!-- AI insight panel — shown after AI Decide -->
       <div class="ai-panel" id="ai-panel">
         <div class="ai-panel-header">
@@ -1051,7 +1070,8 @@
 
       <div class="rules-form">
 
-        <!-- ═══ ENTRY FILTERS ═══════════════════════════════ -->
+        <!-- ═══ MOMENTUM STRATEGY ═══════════════════════════ -->
+        <div id="ctrl-momentum">
         <div class="rule-section-title">Entry Filters</div>
 
         <!-- RSI + EMA trend — toggleable -->
@@ -1390,6 +1410,70 @@
           </div>
         </div>
 
+        </div><!-- end #ctrl-momentum -->
+
+        <!-- ═══ DAY TRADE STRATEGY ══════════════════════════ -->
+        <div id="ctrl-daytrading" style="display:none">
+          <div class="rule-section-title">Entry Signal</div>
+
+          <div class="toggle-row always-on">
+            <div class="toggle-header">
+              <span class="toggle-name">Price Breakout + Volume</span>
+              <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
+            </div>
+            <div class="toggle-desc">Buy when price rises X% over the last N candles with elevated volume — catches momentum breakouts.</div>
+            <div class="toggle-controls">
+              <div class="ctrl-row">
+                <span class="ctrl-label">Price Rise %</span>
+                <div class="ctrl-slider-wrap">
+                  <input type="range" id="r-dt-rise-pct" min="0.5" max="10" step="0.25" value="2" oninput="syncSlider('dt-rise-pct')">
+                  <span class="ctrl-val" id="sv-dt-rise-pct">2.0%</span>
+                </div>
+              </div>
+              <div class="ctrl-row">
+                <span class="ctrl-label">Lookback Candles</span>
+                <div class="ctrl-slider-wrap">
+                  <input type="range" id="r-dt-lookback" min="1" max="20" step="1" value="3" oninput="syncSlider('dt-lookback')">
+                  <span class="ctrl-val" id="sv-dt-lookback">3</span>
+                </div>
+              </div>
+              <div class="ctrl-row">
+                <span class="ctrl-label">Volume Multiple</span>
+                <div class="ctrl-slider-wrap">
+                  <input type="range" id="r-dt-vol-mult" min="1" max="3" step="0.1" value="1.5" oninput="syncSlider('dt-vol-mult')">
+                  <span class="ctrl-val" id="sv-dt-vol-mult">1.5×</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rule-section-title" style="margin-top:6px">Exit Rules</div>
+
+          <div class="toggle-row always-on">
+            <div class="toggle-header">
+              <span class="toggle-name">Trailing Stop &amp; Take Profit</span>
+              <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
+            </div>
+            <div class="toggle-desc">Trailing stop rises with price, locking in gains. Full position exits at the take profit target.</div>
+            <div class="toggle-controls">
+              <div class="ctrl-row">
+                <span class="ctrl-label">Trailing Stop %</span>
+                <div class="ctrl-slider-wrap">
+                  <input type="range" id="r-dt-trail-pct" min="0.25" max="5" step="0.25" value="1" oninput="syncSlider('dt-trail-pct')">
+                  <span class="ctrl-val" id="sv-dt-trail-pct">1.0%</span>
+                </div>
+              </div>
+              <div class="ctrl-row">
+                <span class="ctrl-label">Take Profit %</span>
+                <div class="ctrl-slider-wrap">
+                  <input type="range" id="r-dt-tp-pct" min="0.5" max="15" step="0.25" value="3" oninput="syncSlider('dt-tp-pct')">
+                  <span class="ctrl-val" id="sv-dt-tp-pct">3.0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div><!-- end #ctrl-daytrading -->
+
         <!-- ═══ RISK & SIZING ════════════════════════════════ -->
         <div class="rule-section-title" style="margin-top:6px">Risk & Position Sizing</div>
 
@@ -1592,6 +1676,16 @@
 
 <script>
 // ── State ──────────────────────────────────────────────────────────
+let activeStrategy = 'momentum';
+
+function setStrategy(s) {
+  activeStrategy = s;
+  document.getElementById('ctrl-momentum').style.display  = s === 'momentum'  ? '' : 'none';
+  document.getElementById('ctrl-daytrading').style.display = s === 'daytrading' ? '' : 'none';
+  document.getElementById('tab-strat-momentum').classList.toggle('active', s === 'momentum');
+  document.getElementById('tab-strat-daytrading').classList.toggle('active', s === 'daytrading');
+}
+
 const state = {
   connected: false,
   botRunning: false,
@@ -1653,10 +1747,10 @@ function syncSlider(id) {
   const label  = document.getElementById('sv-' + id);
   if (!slider || !label) return;
   const val = parseFloat(slider.value);
-  const multUnit  = ['atr-stop', 'atr-tp1', 'vol-mult'];
+  const multUnit  = ['atr-stop', 'atr-tp1', 'vol-mult', 'dt-vol-mult'];
   const rUnit     = ['rmult-val'];
   const hourUnit  = ['time-stop', 'cooldown-h'];
-  const plainUnit = ['max-pos', 'rsi-cross', 'adx-min'];
+  const plainUnit = ['max-pos', 'rsi-cross', 'adx-min', 'dt-lookback'];
   const dec2Unit  = ['spread-pct'];
   if (plainUnit.includes(id)) {
     label.textContent = val;
@@ -2031,6 +2125,14 @@ async function loadRules() {
     setToggle('rmult', d.r_multiple_tp_enabled ?? true);
     document.getElementById('r-rmult-val').value  = d.r_multiple           ?? 2.0;
 
+    // Day trading params
+    document.getElementById('r-dt-rise-pct').value  = d.dt_price_rise_pct    ?? 2.0;
+    document.getElementById('r-dt-lookback').value  = d.dt_lookback_candles  ?? 3;
+    document.getElementById('r-dt-vol-mult').value  = d.dt_volume_mult       ?? 1.5;
+    document.getElementById('r-dt-trail-pct').value = d.dt_trailing_stop_pct ?? 1.0;
+    document.getElementById('r-dt-tp-pct').value    = d.dt_take_profit_pct   ?? 3.0;
+
+    setStrategy(d.strategy || 'momentum');
     ALL_SLIDERS.forEach(syncSlider);
   } catch(e) {}
 }
@@ -2083,6 +2185,12 @@ async function saveRules() {
     daily_loss_limit_pct:   f('r-daily-loss'),
     trade_pairs:            g('r-pairs').value.split(',').map(p => p.trim()).filter(Boolean),
     interval:               g('r-interval')?.value || '1h',
+    strategy:               activeStrategy,
+    dt_price_rise_pct:      f('r-dt-rise-pct'),
+    dt_lookback_candles:    i('r-dt-lookback'),
+    dt_volume_mult:         f('r-dt-vol-mult'),
+    dt_trailing_stop_pct:   f('r-dt-trail-pct'),
+    dt_take_profit_pct:     f('r-dt-tp-pct'),
   };
   try {
     const res = await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
@@ -2230,6 +2338,7 @@ async function aiDecide() {
 
 // ── Defaults & Reset ───────────────────────────────────────────────
 const DEFAULTS = {
+  strategy: 'momentum',
   rsi_enabled: true,    rsi_dip_low: 38,    rsi_dip_high: 52,  rsi_cross_level: 48,
   adx_enabled: true,    adx_min: 25,
   volume_spike_enabled: true,  volume_spike_mult: 1.5,
@@ -2249,6 +2358,8 @@ const DEFAULTS = {
   risk_per_trade_pct: 1.0,     max_open_positions: 3,  daily_loss_limit_pct: 3.0,
   trade_pairs: ['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT'],
   interval: '1h',
+  dt_price_rise_pct: 2.0,  dt_lookback_candles: 3,
+  dt_volume_mult: 1.5,      dt_trailing_stop_pct: 1.0,  dt_take_profit_pct: 3.0,
 };
 
 async function resetDefaults() {
@@ -2274,6 +2385,10 @@ async function resetDefaults() {
   setToggle('breakeven', d.breakeven_stop_enabled);
   setToggle('fixed-tp', d.fixed_tp_enabled);          set('r-fixed-tp-pct', d.fixed_tp_pct);
   setToggle('rmult', d.r_multiple_tp_enabled);        set('r-rmult-val', d.r_multiple);
+  set('r-dt-rise-pct', d.dt_price_rise_pct);  set('r-dt-lookback', d.dt_lookback_candles);
+  set('r-dt-vol-mult', d.dt_volume_mult);      set('r-dt-trail-pct', d.dt_trailing_stop_pct);
+  set('r-dt-tp-pct', d.dt_take_profit_pct);
+  setStrategy(d.strategy);
   ALL_SLIDERS.forEach(syncSlider);
   await saveRules();
   showToast('Reset to recommended defaults');
@@ -2323,6 +2438,7 @@ const ALL_SLIDERS = [
   'rsi-cross','adx-min','atr-stop','atr-tp1','tp1-pct','time-stop',
   'risk-pct','max-pos','daily-loss','vol-mult','body-pct','spread-pct',
   'cooldown-h','fixed-stop-pct','trail-pct','fixed-tp-pct','rmult-val',
+  'dt-rise-pct','dt-lookback','dt-vol-mult','dt-trail-pct','dt-tp-pct',
 ];
 
 async function init() {

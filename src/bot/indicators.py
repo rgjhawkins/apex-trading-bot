@@ -167,3 +167,37 @@ def get_signal(df: pd.DataFrame, rules: dict = None) -> dict:
         "macd_hist":    float(c["macd_hist"]),
         "volume_ratio": float(c["volume_ratio"]),
     }
+
+
+def get_daytrading_signal(df: pd.DataFrame, rules: dict = None) -> dict:
+    """
+    Day-trading entry: price rose X% over the last N closed candles + volume confirmation.
+    Evaluated on the last CLOSED candle (index -2).
+    """
+    rules    = rules or {}
+    lookback = max(1, int(rules.get("dt_lookback_candles", 3)))
+
+    if len(df) < lookback + 2:
+        return {"signal": False, "checks": {}}
+
+    c    = df.iloc[-2]            # last closed candle
+    prev = df.iloc[-2 - lookback] # N candles before
+
+    curr_close     = float(c["close"])
+    prev_close     = float(prev["close"])
+    price_rise_pct = (curr_close - prev_close) / prev_close * 100
+
+    checks = {
+        "price_breakout": price_rise_pct >= rules.get("dt_price_rise_pct", 2.0),
+        "volume_confirm": float(c["volume_ratio"]) >= rules.get("dt_volume_mult", 1.5),
+        "above_ema20":    curr_close > float(c["ema20"]),
+    }
+
+    return {
+        "signal":         all(checks.values()),
+        "checks":         checks,
+        "close":          curr_close,
+        "atr":            float(c["atr"]),
+        "price_rise_pct": price_rise_pct,
+        "volume_ratio":   float(c["volume_ratio"]),
+    }

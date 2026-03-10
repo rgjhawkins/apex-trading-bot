@@ -6,6 +6,9 @@ import os
 _RULES_DIR = "/data" if os.path.isdir("/data") else os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 
 DEFAULT_RULES = {
+    # ── Strategy ───────────────────────────────────────────────────
+    "strategy":                 "momentum", # "momentum" | "daytrading"
+
     # ── Pairs & execution ──────────────────────────────────────────
     "trade_pairs":              ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"],
     "interval":                 "1h",      # candle timeframe: 1m 5m 15m 30m 1h 4h 1d
@@ -66,6 +69,13 @@ DEFAULT_RULES = {
 
     # ── Risk controls ─────────────────────────────────────────────
     "daily_loss_limit_pct":     3.0,       # halt all trading if day loss exceeds 3%
+
+    # ── Day trading strategy parameters ───────────────────────────
+    "dt_price_rise_pct":        2.0,       # price must rise X% over lookback candles
+    "dt_lookback_candles":      3,         # how many candles back to measure the rise
+    "dt_volume_mult":           1.5,       # entry volume must be > N× 20-period avg
+    "dt_trailing_stop_pct":     1.0,       # trailing stop lags N% below price high
+    "dt_take_profit_pct":       3.0,       # exit full position at N% gain
 }
 
 
