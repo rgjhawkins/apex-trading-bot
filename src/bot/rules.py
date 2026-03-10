@@ -1,7 +1,9 @@
 import json
 import os
 
-_RULES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+# Use /data (Railway persistent volume) if it exists, otherwise fall back to
+# the project root for local development.
+_RULES_DIR = "/data" if os.path.isdir("/data") else os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 
 DEFAULT_RULES = {
     # ── Pairs & execution ──────────────────────────────────────────

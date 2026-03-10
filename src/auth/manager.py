@@ -7,7 +7,10 @@ import json
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
 
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "../../config.json")
+# Use /data (Railway persistent volume) if it exists, otherwise fall back to
+# the project root for local development.
+_DATA_DIR   = "/data" if os.path.isdir("/data") else os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+CONFIG_FILE = os.path.join(_DATA_DIR, "config.json")
 
 
 def _path() -> str:
