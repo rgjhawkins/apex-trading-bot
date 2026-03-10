@@ -2,15 +2,13 @@ from binance import Client
 from src.config.settings import API_KEY, SECRET_KEY, USE_TESTNET
 
 
-def create_client() -> Client:
-    client = Client(API_KEY, SECRET_KEY, testnet=USE_TESTNET)
-    return client
-
-
 class BinanceClient:
-    def __init__(self):
-        self.client = create_client()
-        self.testnet = USE_TESTNET
+    def __init__(self, api_key: str = None, secret_key: str = None, testnet: bool = None):
+        _key     = api_key     or API_KEY
+        _secret  = secret_key  or SECRET_KEY
+        _testnet = testnet if testnet is not None else USE_TESTNET
+        self.client  = Client(_key, _secret, testnet=_testnet)
+        self.testnet = _testnet
 
     def test_connection(self) -> bool:
         try:

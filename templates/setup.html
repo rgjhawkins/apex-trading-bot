@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — First-Time Setup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #07080D; --bg1: #0D0F18; --bg2: #111422;
+    --border: #1E2340; --border2: #2A2F50;
+    --gold: #F0B90B; --gold-dim: #8B6A00; --gold-glow: rgba(240,185,11,0.12);
+    --green: #00C07F; --red: #FF3B5C; --blue: #4B8BF5;
+    --text: #C8CFEE; --text-dim: #5A6090; --text-bright: #EEF0FF;
+    --mono: 'IBM Plex Mono', monospace; --display: 'Chakra Petch', sans-serif;
+  }
+  html, body {
+    min-height: 100%; background: var(--bg); color: var(--text);
+    font-family: var(--mono); font-size: 13px;
+    display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(240,185,11,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240,185,11,0.015) 1px, transparent 1px);
+    background-size: 40px 40px; pointer-events: none;
+  }
+  .card {
+    position: relative; width: 480px;
+    background: var(--bg1); border: 1px solid var(--border2);
+    border-radius: 6px; box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+    overflow: hidden;
+  }
+  .card-top {
+    background: var(--bg2); border-bottom: 1px solid var(--border);
+    padding: 24px 32px; text-align: center;
+  }
+  .logo { font-family: var(--display); font-weight: 700; font-size: 24px; letter-spacing: 6px; color: var(--gold); text-shadow: 0 0 30px rgba(240,185,11,0.4); }
+  .logo-sub { font-size: 9px; letter-spacing: 3px; color: var(--text-dim); margin-top: 4px; text-transform: uppercase; }
+  .card-body { padding: 28px 32px; }
+  .section-title {
+    font-family: var(--display); font-size: 9px; font-weight: 600;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--gold-dim);
+    padding-bottom: 10px; border-bottom: 1px solid var(--border); margin-bottom: 16px; margin-top: 24px;
+  }
+  .section-title:first-child { margin-top: 0; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--text-dim); margin-bottom: 6px; }
+  .field label span { color: var(--text-dim); font-size: 9px; letter-spacing: 0; text-transform: none; }
+  .field input[type=text], .field input[type=password] {
+    width: 100%; background: var(--bg2); border: 1px solid var(--border2);
+    border-radius: 3px; padding: 9px 12px; color: var(--text-bright);
+    font-family: var(--mono); font-size: 12px; outline: none; transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: var(--gold-dim); }
+  .field .hint { font-size: 10px; color: var(--text-dim); margin-top: 5px; line-height: 1.4; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; }
+  .toggle-label { font-size: 11px; color: var(--text); }
+  .toggle-label small { display: block; font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+  .toggle-switch { position: relative; width: 36px; height: 20px; }
+  .toggle-switch input { opacity: 0; width: 0; height: 0; }
+  .toggle-track { position: absolute; inset: 0; background: var(--border2); border-radius: 10px; cursor: pointer; transition: background 0.2s; }
+  .toggle-track::after { content: ''; position: absolute; left: 3px; top: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--text-dim); transition: all 0.2s; }
+  .toggle-switch input:checked + .toggle-track { background: var(--gold); }
+  .toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); background: #000; }
+  .error-msg { background: rgba(255,59,92,0.08); border: 1px solid rgba(255,59,92,0.3); color: #FF3B5C; padding: 8px 12px; border-radius: 3px; font-size: 11px; margin-bottom: 16px; }
+  .info-msg { background: rgba(75,139,245,0.08); border: 1px solid rgba(75,139,245,0.3); color: var(--blue); padding: 10px 12px; border-radius: 3px; font-size: 11px; margin-bottom: 20px; line-height: 1.5; }
+  .btn-setup {
+    width: 100%; padding: 11px;
+    font-family: var(--display); font-size: 12px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase;
+    background: linear-gradient(135deg, #8B6A00, #F0B90B, #8B6A00);
+    background-size: 200% 100%; animation: shimmer 3s ease infinite;
+    border: none; border-radius: 3px; color: #000; cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.2s; margin-top: 8px;
+  }
+  .btn-setup:hover { box-shadow: 0 0 24px rgba(240,185,11,0.4); transform: translateY(-1px); }
+  @keyframes shimmer { 0% { background-position: 200% center; } 100% { background-position: -200% center; } }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-top">
+    <div class="logo">APEX</div>
+    <div class="logo-sub">First-Time Setup</div>
+  </div>
+  <div class="card-body">
+    <div class="info-msg">
+      Welcome. Create your admin account and enter your API keys to get started.
+      You can update these at any time from the dashboard settings.
+    </div>
+
+    {% if error %}
+    <div class="error-msg">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" action="/setup">
+
+      <div class="section-title">Admin Account</div>
+
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="username" autocomplete="username" required autofocus>
+      </div>
+      <div class="field">
+        <label>Password <span>(min 8 characters)</span></label>
+        <input type="password" name="password" autocomplete="new-password" required>
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        <input type="password" name="confirm" autocomplete="new-password" required>
+      </div>
+
+      <div class="section-title">Binance API Keys</div>
+
+      <div class="field">
+        <label>API Key</label>
+        <input type="text" name="binance_api_key" placeholder="Paste your Binance API key">
+        <div class="hint">From Binance → Account → API Management. Use testnet keys at testnet.binance.vision</div>
+      </div>
+      <div class="field">
+        <label>Secret Key</label>
+        <input type="password" name="binance_secret_key" placeholder="Paste your Binance secret key">
+      </div>
+      <div class="toggle-row">
+        <div class="toggle-label">
+          Use Testnet
+          <small>Recommended — trades paper money, not real funds</small>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" name="use_testnet" checked>
+          <span class="toggle-track"></span>
+        </label>
+      </div>
+
+      <div class="section-title">Anthropic API Key <span style="font-weight:300;font-family:var(--mono);letter-spacing:0;font-size:9px;color:var(--text-dim);text-transform:none">(for AI Decide feature)</span></div>
+
+      <div class="field">
+        <label>API Key</label>
+        <input type="text" name="anthropic_api_key" placeholder="sk-ant-...">
+        <div class="hint">From console.anthropic.com → API Keys. Optional — only needed for AI Decide.</div>
+      </div>
+
+      <button type="submit" class="btn-setup">Create Account &amp; Continue</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

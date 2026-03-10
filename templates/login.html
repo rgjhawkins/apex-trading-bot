@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — Login</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #07080D;
+    --bg1:      #0D0F18;
+    --bg2:      #111422;
+    --border:   #1E2340;
+    --border2:  #2A2F50;
+    --gold:     #F0B90B;
+    --gold-dim: #8B6A00;
+    --gold-glow:rgba(240,185,11,0.12);
+    --green:    #00C07F;
+    --red:      #FF3B5C;
+    --text:     #C8CFEE;
+    --text-dim: #5A6090;
+    --text-bright: #EEF0FF;
+    --mono:    'IBM Plex Mono', monospace;
+    --display: 'Chakra Petch', sans-serif;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(240,185,11,0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(240,185,11,0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .card {
+    position: relative;
+    width: 360px;
+    background: var(--bg1);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(240,185,11,0.05);
+    overflow: hidden;
+  }
+
+  .card-top {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 32px 24px;
+    text-align: center;
+  }
+
+  .logo {
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 28px;
+    letter-spacing: 6px;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(240,185,11,0.4);
+  }
+  .logo-sub {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    text-transform: uppercase;
+  }
+
+  .card-body { padding: 28px 32px; }
+
+  .field { margin-bottom: 16px; }
+  .field label {
+    display: block;
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+  }
+  .field input {
+    width: 100%;
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 3px;
+    padding: 10px 12px;
+    color: var(--text-bright);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field input:focus { border-color: var(--gold-dim); }
+
+  .error-msg {
+    background: rgba(255,59,92,0.08);
+    border: 1px solid rgba(255,59,92,0.3);
+    color: #FF3B5C;
+    padding: 8px 12px;
+    border-radius: 3px;
+    font-size: 11px;
+    margin-bottom: 16px;
+  }
+
+  .btn-login {
+    width: 100%;
+    padding: 11px;
+    font-family: var(--display);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #8B6A00, #F0B90B, #8B6A00);
+    background-size: 200% 100%;
+    animation: shimmer 3s ease infinite;
+    border: none;
+    border-radius: 3px;
+    color: #000;
+    cursor: pointer;
+    transition: box-shadow 0.2s, transform 0.2s;
+  }
+  .btn-login:hover { box-shadow: 0 0 24px rgba(240,185,11,0.4); transform: translateY(-1px); }
+
+  @keyframes shimmer {
+    0%   { background-position: 200% center; }
+    100% { background-position: -200% center; }
+  }
+
+  .card-foot {
+    padding: 12px 32px 20px;
+    text-align: center;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="card-top">
+    <div class="logo">APEX</div>
+    <div class="logo-sub">Trading Bot · Secure Access</div>
+  </div>
+  <div class="card-body">
+    {% if error %}
+    <div class="error-msg">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="/login">
+      <div class="field">
+        <label>Username</label>
+        <input type="text" name="username" autocomplete="username" autofocus required>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" name="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="btn-login">Sign In</button>
+    </form>
+  </div>
+  <div class="card-foot">Protected access — authorised users only</div>
+</div>
+</body>
+</html>
