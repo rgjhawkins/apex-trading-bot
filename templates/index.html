@@ -2427,11 +2427,16 @@ async function resetDefaults() {
 // ── Bot Control ────────────────────────────────────────────────────
 async function botStart() {
   try {
-    await fetch('/api/bot/start', { method: 'POST' });
-    showToast('Bot started');
+    const res  = await fetch('/api/bot/start', { method: 'POST' });
+    const data = await res.json();
+    if (data.started) {
+      showToast('Bot started');
+    } else {
+      showToast(data.reason || 'Could not start bot');
+    }
     pollStatus();
     pollLog();
-  } catch(e) {}
+  } catch(e) { showToast('Start request failed'); }
 }
 
 async function botStop() {

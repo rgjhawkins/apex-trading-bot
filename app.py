@@ -394,8 +394,8 @@ def set_rules():
 def bot_start():
     username = session.get("username", "")
     eng = get_engine(username)
-    ok  = eng.start()
-    return jsonify({"started": ok, "running": eng.running})
+    ok, reason = eng.start()
+    return jsonify({"started": ok, "running": eng.running, "reason": reason})
 
 
 @app.route("/api/bot/stop", methods=["POST"])

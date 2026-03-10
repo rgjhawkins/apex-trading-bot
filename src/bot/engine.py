@@ -50,17 +50,19 @@ class BotEngine:
 
     def start(self):
         if self.client is None:
-            self._log("ERROR", "Cannot start: Binance client unavailable")
-            return False
+            self._log("ERROR", "Cannot start: add Binance API keys in Settings")
+            return False, "No Binance API keys configured — add them in Settings"
         if self.running:
-            return False
+            return False, "Already running"
         self.running = True
         self.stats["started_at"] = datetime.utcnow().isoformat()
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
-        interval = load_rules(self.username).get("interval", "1h")
-        self._log("INFO", f"Bot started — RSI Momentum + EMA Trend Filter [{interval} candles]")
-        return True
+        rules    = load_rules(self.username)
+        strategy = rules.get("strategy", "momentum").upper()
+        interval = rules.get("interval", "1h")
+        self._log("INFO", f"Bot started — {strategy} strategy [{interval} candles]")
+        return True, ""
 
     def stop(self):
         if not self.running:
