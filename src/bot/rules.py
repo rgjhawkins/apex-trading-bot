@@ -1,7 +1,7 @@
 import json
 import os
 
-RULES_FILE = os.path.join(os.path.dirname(__file__), "../../rules.json")
+_RULES_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 
 DEFAULT_RULES = {
     # ── Pairs & execution ──────────────────────────────────────────
@@ -50,7 +50,7 @@ DEFAULT_RULES = {
     "breakeven_stop_enabled":   True,      # move stop to entry after TP1 — risk-free remainder
 
     # ── Take profit ────────────────────────────────────────────────
-    "atr_tp1_mult":             2.5,       # TP1 = entry + (ATR × 2.5) — 1.25:1 RR at partial
+    "atr_tp1_mult":             2.5,       # TP1 = entry + (ATR × 2.5)
     "tp1_exit_pct":             50.0,      # exit 50% at TP1, trail the rest
 
     "fixed_tp_enabled":         False,
@@ -67,8 +67,12 @@ DEFAULT_RULES = {
 }
 
 
-def load_rules() -> dict:
-    path = os.path.abspath(RULES_FILE)
+def _rules_path(username: str) -> str:
+    return os.path.join(_RULES_DIR, f"rules_{username}.json")
+
+
+def load_rules(username: str = "default") -> dict:
+    path = _rules_path(username)
     if os.path.exists(path):
         with open(path) as f:
             saved = json.load(f)
@@ -76,9 +80,8 @@ def load_rules() -> dict:
     return DEFAULT_RULES.copy()
 
 
-def save_rules(rules: dict) -> dict:
+def save_rules(username: str, rules: dict) -> dict:
     merged = {**DEFAULT_RULES, **rules}
-    path = os.path.abspath(RULES_FILE)
-    with open(path, "w") as f:
+    with open(_rules_path(username), "w") as f:
         json.dump(merged, f, indent=2)
     return merged

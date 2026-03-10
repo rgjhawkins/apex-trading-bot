@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>APEX — First-Time Setup</title>
+<title>APEX — Create Account</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
@@ -85,19 +85,19 @@
 <div class="card">
   <div class="card-top">
     <div class="logo">APEX</div>
-    <div class="logo-sub">First-Time Setup</div>
+    <div class="logo-sub">Create Account</div>
   </div>
   <div class="card-body">
     <div class="info-msg">
-      Welcome. Create your admin account and enter your API keys to get started.
-      You can update these at any time from the dashboard settings.
+      Create your account and enter your Binance API keys to get started.
+      You can update keys at any time from the dashboard settings.
     </div>
 
     {% if error %}
     <div class="error-msg">{{ error }}</div>
     {% endif %}
 
-    <form method="post" action="/setup">
+    <form method="post" action="/register">
 
       <div class="section-title">Admin Account</div>
 
@@ -145,6 +145,9 @@
       </div>
 
       <button type="submit" class="btn-setup">Create Account &amp; Continue</button>
+      <div style="text-align:center;margin-top:14px;font-size:10px;color:var(--text-dim)">
+        Already have an account? <a href="/login" style="color:var(--gold-dim);text-decoration:none;">Sign in →</a>
+      </div>
     </form>
   </div>
 </div>

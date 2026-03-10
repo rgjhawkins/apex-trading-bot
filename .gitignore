@@ -1,5 +1,6 @@
 .env
 config.json
+rules_*.json
 __pycache__/
 *.pyc
 *.pyo

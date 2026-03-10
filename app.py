@@ -8,7 +8,7 @@ from src.bot.rules import load_rules, save_rules
 from src.bot.engine import BotEngine
 from src.ai.advisor import ai_recommend
 from src.auth.manager import (
-    is_setup_complete, setup_user, verify_credentials, get_username,
+    is_username_taken, register_user, verify_credentials,
     change_password, get_api_keys, save_api_keys, mask,
 )
 
@@ -17,11 +17,14 @@ CORS(app)
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "apex-change-this-in-production")
 
 
-# ── Client initialisation ─────────────────────────────────────────────────────
+# ── Per-user engine registry ──────────────────────────────────────
 
-def _make_binance() -> BinanceClient | None:
-    keys = get_api_keys()
-    # Sync Anthropic key to env so advisor.py picks it up
+_engines: dict[str, BotEngine] = {}
+_clients: dict[str, BinanceClient | None] = {}
+
+
+def _make_client(username: str) -> BinanceClient | None:
+    keys = get_api_keys(username)
     if keys.get("anthropic_api_key"):
         os.environ["ANTHROPIC_API_KEY"] = keys["anthropic_api_key"]
     try:
@@ -31,35 +34,41 @@ def _make_binance() -> BinanceClient | None:
             testnet    = keys["use_testnet"],
         )
     except Exception as e:
-        print(f"Warning: Binance client init failed: {e}")
+        print(f"[{username}] Binance client init failed: {e}")
         return None
 
 
-binance = _make_binance()
-engine  = BotEngine(binance)
+def get_engine(username: str) -> BotEngine:
+    """Return the BotEngine for this user, creating it on first access."""
+    if username not in _engines:
+        client = _make_client(username)
+        _clients[username] = client
+        _engines[username] = BotEngine(client)
+    return _engines[username]
 
 
-def reinit_clients(api_key: str, secret_key: str, anthropic_key: str, use_testnet: bool):
-    """Rebuild the Binance client with new credentials (stop bot first if running)."""
-    global binance
+def reinit_client(username: str, api_key: str, secret_key: str,
+                  anthropic_key: str, use_testnet: bool):
+    """Rebuild the Binance client for a user (stops bot first if running)."""
     if anthropic_key:
         os.environ["ANTHROPIC_API_KEY"] = anthropic_key
-    if engine.running:
-        engine.stop()
+    eng = get_engine(username)
+    if eng.running:
+        eng.stop()
     try:
-        new_binance    = BinanceClient(api_key=api_key, secret_key=secret_key, testnet=use_testnet)
-        binance        = new_binance
-        engine.client  = new_binance
-        engine._log("INFO", f"Exchange client reinitialized ({'testnet' if use_testnet else 'live'})")
+        client = BinanceClient(api_key=api_key, secret_key=secret_key, testnet=use_testnet)
+        _clients[username] = client
+        eng.client = client
+        eng._log("INFO", f"Exchange client reconnected ({'testnet' if use_testnet else 'live'})")
     except Exception as e:
-        binance       = None
-        engine.client = None
+        _clients[username] = None
+        eng.client = None
         raise ValueError(str(e))
 
 
-# ── Auth middleware ───────────────────────────────────────────────────────────
+# ── Auth middleware ───────────────────────────────────────────────
 
-_OPEN_PATHS = ("/login", "/setup")
+_OPEN_PATHS = ("/login", "/register")
 
 @app.before_request
 def require_login():
@@ -71,12 +80,10 @@ def require_login():
         return redirect("/login")
 
 
-# ── Auth routes ───────────────────────────────────────────────────────────────
+# ── Auth routes ───────────────────────────────────────────────────
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    if not is_setup_complete():
-        return redirect("/setup")
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
@@ -94,10 +101,8 @@ def logout():
     return redirect("/login")
 
 
-@app.route("/setup", methods=["GET", "POST"])
-def setup():
-    if is_setup_complete():
-        return redirect("/login")
+@app.route("/register", methods=["GET", "POST"])
+def register():
     error = None
     if request.method == "POST":
         username = request.form.get("username", "").strip()
@@ -105,53 +110,56 @@ def setup():
         confirm  = request.form.get("confirm",  "")
         if not username or not password:
             error = "Username and password are required"
+        elif len(username) < 3:
+            error = "Username must be at least 3 characters"
+        elif not username.isalnum():
+            error = "Username may only contain letters and numbers"
+        elif is_username_taken(username):
+            error = "That username is already taken"
         elif password != confirm:
             error = "Passwords do not match"
         elif len(password) < 8:
             error = "Password must be at least 8 characters"
         else:
-            setup_user(username, password)
-            # Optionally save API keys from the setup form
+            register_user(username, password)
             keys = {
                 "binance_api_key":    request.form.get("binance_api_key",    "").strip(),
                 "binance_secret_key": request.form.get("binance_secret_key", "").strip(),
                 "anthropic_api_key":  request.form.get("anthropic_api_key",  "").strip(),
                 "use_testnet":        request.form.get("use_testnet") == "on",
             }
-            save_api_keys(keys)
+            save_api_keys(username, keys)
             try:
-                reinit_clients(
-                    keys["binance_api_key"], keys["binance_secret_key"],
-                    keys["anthropic_api_key"], keys["use_testnet"],
-                )
+                reinit_client(username, keys["binance_api_key"], keys["binance_secret_key"],
+                              keys["anthropic_api_key"], keys["use_testnet"])
             except Exception:
                 pass
             return redirect("/login")
     return render_template("setup.html", error=error)
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
+# ── Helpers ───────────────────────────────────────────────────────
 
 STABLECOIN_ASSETS = {"USDT", "USDC", "BUSD", "TUSD", "DAI", "FDUSD", "USDP"}
 
 
-def get_price(symbol: str) -> float:
+def get_price(client: BinanceClient, symbol: str) -> float:
     try:
-        return float(binance.get_ticker(symbol)["price"])
+        return float(client.get_ticker(symbol)["price"])
     except Exception:
         return 0.0
 
 
-def estimate_usdt_value(asset: str, amount: float) -> float:
+def estimate_usdt_value(client: BinanceClient, asset: str, amount: float) -> float:
     if asset in STABLECOIN_ASSETS or asset == "USDT":
         return amount
     try:
-        return amount * (get_price(asset + "USDT") or 0.0)
+        return amount * (get_price(client, asset + "USDT") or 0.0)
     except Exception:
         return 0.0
 
 
-# ── Main routes ───────────────────────────────────────────────────────────────
+# ── Main routes ───────────────────────────────────────────────────
 
 @app.route("/")
 def index():
@@ -160,28 +168,35 @@ def index():
 
 @app.route("/api/status")
 def api_status():
-    if binance is None:
+    username = session.get("username", "")
+    eng      = get_engine(username)
+    client   = _clients.get(username)
+    if client is None:
         return jsonify({
             "connected": False, "testnet": True,
             "server_time": None, "timestamp": datetime.utcnow().isoformat(),
-            "bot": engine.get_stats(),
-            "error": "Binance client unavailable",
+            "bot": eng.get_stats(),
+            "error": "Binance client unavailable — add API keys in Settings",
         })
-    connected   = binance.test_connection()
-    server_time = binance.get_server_time() if connected else {}
+    connected   = client.test_connection()
+    server_time = client.get_server_time() if connected else {}
     return jsonify({
         "connected":   connected,
-        "testnet":     binance.testnet,
+        "testnet":     client.testnet,
         "server_time": server_time.get("serverTime"),
         "timestamp":   datetime.utcnow().isoformat(),
-        "bot":         engine.get_stats(),
+        "bot":         eng.get_stats(),
     })
 
 
 @app.route("/api/portfolio")
 def api_portfolio():
+    username = session.get("username", "")
+    client   = _clients.get(username)
+    if client is None:
+        return jsonify({"error": "Exchange not connected"}), 400
     try:
-        account      = binance.get_account()
+        account      = client.get_account()
         raw_balances = account.get("balances", [])
         balances, total_usdt = [], 0.0
         for b in raw_balances:
@@ -189,7 +204,7 @@ def api_portfolio():
             total = free + float(b["locked"])
             if total < 0.0001:
                 continue
-            usdt_val = estimate_usdt_value(b["asset"], total)
+            usdt_val = estimate_usdt_value(client, b["asset"], total)
             total_usdt += usdt_val
             balances.append({"asset": b["asset"], "free": free,
                               "total": total, "usdt_value": round(usdt_val, 2)})
@@ -202,12 +217,16 @@ def api_portfolio():
 
 @app.route("/api/tickers")
 def api_tickers():
+    username = session.get("username", "")
+    client   = _clients.get(username)
+    if client is None:
+        return jsonify([])
     pairs   = request.args.get("pairs", "BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT").split(",")
     results = []
     for pair in pairs:
         pair = pair.strip().upper()
         try:
-            t = binance.client.get_ticker(symbol=pair)
+            t = client.client.get_ticker(symbol=pair)
             results.append({"symbol": pair, "price": float(t["lastPrice"]),
                             "change_pct": float(t["priceChangePercent"]),
                             "volume": float(t["volume"]),
@@ -219,11 +238,15 @@ def api_tickers():
 
 @app.route("/api/orders")
 def api_orders():
+    username = session.get("username", "")
+    client   = _clients.get(username)
+    if client is None:
+        return jsonify([])
     pairs      = request.args.get("pairs", "BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT").split(",")
     all_orders = []
     for pair in pairs:
         try:
-            all_orders.extend(binance.client.get_all_orders(symbol=pair.strip().upper(), limit=10))
+            all_orders.extend(client.client.get_all_orders(symbol=pair.strip().upper(), limit=10))
         except Exception:
             pass
     all_orders.sort(key=lambda x: x.get("time", 0), reverse=True)
@@ -232,15 +255,20 @@ def api_orders():
 
 @app.route("/api/open-orders")
 def api_open_orders():
+    username = session.get("username", "")
+    client   = _clients.get(username)
+    if client is None:
+        return jsonify([])
     try:
-        return jsonify(binance.client.get_open_orders())
+        return jsonify(client.client.get_open_orders())
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/rules", methods=["GET"])
 def get_rules():
-    return jsonify(load_rules())
+    username = session.get("username", "")
+    return jsonify(load_rules(username))
 
 
 _RULE_LABELS = {
@@ -291,69 +319,81 @@ def _fmt(val):
         return str(int(val))
     return str(val)
 
+
 @app.route("/api/rules", methods=["POST"])
 def set_rules():
-    current = load_rules()
-    saved   = save_rules(request.json or {})
+    username = session.get("username", "")
+    current  = load_rules(username)
+    saved    = save_rules(username, request.json or {})
+    eng      = get_engine(username)
 
     changes = [
         f"{_RULE_LABELS[k]}: {_fmt(current.get(k))} → {_fmt(saved.get(k))}"
         for k in _RULE_LABELS
         if current.get(k) != saved.get(k)
     ]
-
     if changes:
-        engine._log("INFO", f"Rules updated — {len(changes)} change{'s' if len(changes) > 1 else ''}")
+        eng._log("INFO", f"Rules updated — {len(changes)} change{'s' if len(changes) > 1 else ''}")
         for change in changes:
-            engine._log("INFO", f"  ↳ {change}")
+            eng._log("INFO", f"  ↳ {change}")
     else:
-        engine._log("INFO", "Rules saved (no changes detected)")
+        eng._log("INFO", "Rules saved (no changes detected)")
 
     return jsonify(saved)
 
 
 @app.route("/api/bot/start", methods=["POST"])
 def bot_start():
-    ok = engine.start()
-    return jsonify({"started": ok, "running": engine.running})
+    username = session.get("username", "")
+    eng = get_engine(username)
+    ok  = eng.start()
+    return jsonify({"started": ok, "running": eng.running})
 
 
 @app.route("/api/bot/stop", methods=["POST"])
 def bot_stop():
-    ok = engine.stop()
-    return jsonify({"stopped": ok, "running": engine.running})
+    username = session.get("username", "")
+    eng = get_engine(username)
+    ok  = eng.stop()
+    return jsonify({"stopped": ok, "running": eng.running})
 
 
 @app.route("/api/log")
 def bot_log():
-    limit = int(request.args.get("limit", 50))
-    return jsonify(engine.get_log(limit))
+    username = session.get("username", "")
+    limit    = int(request.args.get("limit", 50))
+    return jsonify(get_engine(username).get_log(limit))
 
 
 @app.route("/api/positions")
 def api_positions():
+    username = session.get("username", "")
+    eng      = get_engine(username)
     return jsonify({
-        "open":   engine.pm.get_open_positions(),
-        "closed": engine.pm.get_closed_trades(50),
-        "stats":  engine.pm.get_stats(),
+        "open":   eng.pm.get_open_positions(),
+        "closed": eng.pm.get_closed_trades(50),
+        "stats":  eng.pm.get_stats(),
     })
 
 
 @app.route("/api/bot/stats")
 def api_bot_stats():
-    return jsonify(engine.get_stats())
+    username = session.get("username", "")
+    return jsonify(get_engine(username).get_stats())
 
 
 @app.route("/api/ai-decide", methods=["POST"])
 def ai_decide():
-    if binance is None:
+    username = session.get("username", "")
+    client   = _clients.get(username)
+    if client is None:
         return jsonify({"error": "Exchange not connected — cannot fetch market data"}), 400
     try:
-        current_rules = load_rules()
+        current_rules = load_rules(username)
         pairs         = current_rules.get("trade_pairs", ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"])
-        rules, reasoning, market_assessment = ai_recommend(binance.client, pairs, current_rules)
-        merged = save_rules({**current_rules, **rules})
-        engine._log("INFO", f"AI decided: {market_assessment}")
+        rules, reasoning, market_assessment = ai_recommend(client.client, pairs, current_rules)
+        merged = save_rules(username, {**current_rules, **rules})
+        get_engine(username)._log("INFO", f"AI decided: {market_assessment}")
         return jsonify({"rules": merged, "reasoning": reasoning, "market_assessment": market_assessment})
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -361,11 +401,12 @@ def ai_decide():
         return jsonify({"error": f"AI call failed: {e}"}), 500
 
 
-# ── API Keys management ───────────────────────────────────────────────────────
+# ── API Keys management ───────────────────────────────────────────
 
 @app.route("/api/keys", methods=["GET"])
 def api_get_keys():
-    keys = get_api_keys()
+    username = session.get("username", "")
+    keys     = get_api_keys(username)
     return jsonify({
         "binance_api_key":    mask(keys["binance_api_key"]),
         "binance_secret_key": mask(keys["binance_secret_key"]),
@@ -378,8 +419,9 @@ def api_get_keys():
 
 @app.route("/api/keys", methods=["POST"])
 def api_update_keys():
-    data    = request.json or {}
-    current = get_api_keys()
+    username = session.get("username", "")
+    data     = request.json or {}
+    current  = get_api_keys(username)
 
     def resolve(field, current_val):
         val = data.get(field, "")
@@ -391,12 +433,10 @@ def api_update_keys():
         "anthropic_api_key":  resolve("anthropic_api_key",  current["anthropic_api_key"]),
         "use_testnet":        data.get("use_testnet", current["use_testnet"]),
     }
-    save_api_keys(new_keys)
+    save_api_keys(username, new_keys)
     try:
-        reinit_clients(
-            new_keys["binance_api_key"], new_keys["binance_secret_key"],
-            new_keys["anthropic_api_key"], new_keys["use_testnet"],
-        )
+        reinit_client(username, new_keys["binance_api_key"], new_keys["binance_secret_key"],
+                      new_keys["anthropic_api_key"], new_keys["use_testnet"])
         return jsonify({"ok": True, "message": "Keys saved and exchange reconnected"})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -404,15 +444,15 @@ def api_update_keys():
 
 @app.route("/api/password", methods=["POST"])
 def api_change_password():
+    username   = session.get("username", "")
     data       = request.json or {}
     current_pw = data.get("current_password", "")
     new_pw     = data.get("new_password", "")
-    username   = session.get("username", "")
     if not verify_credentials(username, current_pw):
         return jsonify({"error": "Current password is incorrect"}), 400
     if len(new_pw) < 8:
         return jsonify({"error": "New password must be at least 8 characters"}), 400
-    change_password(new_pw)
+    change_password(username, new_pw)
     return jsonify({"ok": True})
 
 
