@@ -82,7 +82,7 @@ class BotEngine:
                 self._reset_daily_halt_if_new_day()
                 if self._daily_loss_halt:
                     self._log("INFO", "Daily loss limit active — halted until UTC midnight")
-                    time.sleep(LOOP_SLEEP)
+                    time.sleep(60)
                     continue
 
                 self.stats["last_tick"] = datetime.utcnow().isoformat()
