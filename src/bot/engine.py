@@ -6,7 +6,7 @@ so changes in the dashboard take effect immediately.
 
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from src.bot.indicators import klines_to_df, compute_indicators, get_signal
 from src.bot.position_manager import PositionManager, MIN_NOTIONAL
@@ -42,6 +42,7 @@ class BotEngine:
             "pnl_today":    0.0,
             "started_at":   None,
             "last_tick":    None,
+            "next_tick_at": None,
         }
 
     # ── Public controls ────────────────────────────────────────────
@@ -64,7 +65,8 @@ class BotEngine:
         if not self.running:
             return False
         self.running = False
-        self.stats["started_at"] = None
+        self.stats["started_at"]   = None
+        self.stats["next_tick_at"] = None
         self._log("INFO", "Bot stopped by user")
         return True
 
@@ -107,7 +109,9 @@ class BotEngine:
             except Exception as e:
                 self._log("ERROR", f"Loop error: {e}")
 
-            time.sleep(INTERVAL_SLEEP.get(rules.get("interval", "1h"), 60))
+            sleep_s = INTERVAL_SLEEP.get(rules.get("interval", "1h"), 60)
+            self.stats["next_tick_at"] = (datetime.utcnow() + timedelta(seconds=sleep_s)).isoformat()
+            time.sleep(sleep_s)
 
     # ── Per-pair processing ────────────────────────────────────────
 

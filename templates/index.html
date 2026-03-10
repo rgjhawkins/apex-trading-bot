@@ -1025,6 +1025,10 @@
             <span class="bot-stat-label">Last Tick</span>
             <span class="bot-stat-val" id="stat-tick">—</span>
           </div>
+          <div class="bot-stat-row">
+            <span class="bot-stat-label">Next Check</span>
+            <span class="bot-stat-val" id="stat-next-tick" style="font-variant-numeric:tabular-nums">—</span>
+          </div>
         </div>
       </div>
     </div>
@@ -1591,6 +1595,7 @@
 const state = {
   connected: false,
   botRunning: false,
+  nextTickAt: null,
   activeTab: 'orders',
   portfolio: null,
   tickers: [],
@@ -1599,11 +1604,29 @@ const state = {
   balances: [],
 };
 
-// ── Clock ──────────────────────────────────────────────────────────
+// ── Clock + next-tick countdown ────────────────────────────────────
 function updateClock() {
   const now = new Date();
   document.getElementById('clock').textContent =
     now.toUTCString().split(' ')[4] + ' UTC';
+
+  const el = document.getElementById('stat-next-tick');
+  if (!el) return;
+  if (!state.botRunning || !state.nextTickAt) {
+    el.textContent = '—';
+    el.style.color = '';
+    return;
+  }
+  const secsLeft = Math.round((new Date(state.nextTickAt + 'Z') - now) / 1000);
+  if (secsLeft <= 0) {
+    el.textContent = 'checking…';
+    el.style.color = 'var(--gold)';
+  } else {
+    const m = String(Math.floor(secsLeft / 60)).padStart(2, '0');
+    const s = String(secsLeft % 60).padStart(2, '0');
+    el.textContent = `${m}:${s}`;
+    el.style.color = secsLeft <= 10 ? 'var(--gold)' : '';
+  }
 }
 setInterval(updateClock, 1000);
 updateClock();
@@ -1682,8 +1705,9 @@ async function pollStatus() {
     const r = await fetch('/api/status');
     const d = await r.json();
 
-    state.connected = d.connected;
+    state.connected  = d.connected;
     state.botRunning = d.bot?.running || false;
+    state.nextTickAt = d.bot?.next_tick_at || null;
 
     // Connection badge
     const cs = document.getElementById('conn-status');
@@ -2063,6 +2087,7 @@ async function saveRules() {
   try {
     await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
     showToast('Rules saved');
+    pollLog();
     pollTickers();
     pollOrders();
   } catch(e) { showToast('Save failed'); }
