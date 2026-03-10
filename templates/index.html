@@ -60,7 +60,7 @@
     z-index: 1;
     display: grid;
     grid-template-rows: 48px 1fr;
-    grid-template-columns: 260px 1fr 300px;
+    grid-template-columns: 320px 1fr 280px;
     height: 100vh;
     gap: 0;
   }
@@ -272,20 +272,24 @@
   .rule-slider-wrap { display: flex; align-items: center; gap: 8px; }
   input[type=range] {
     -webkit-appearance: none;
-    flex: 1;
-    height: 3px;
+    width: 100%;
+    height: 4px;
     background: var(--border2);
     border-radius: 2px;
     outline: none;
+    cursor: pointer;
   }
   input[type=range]::-webkit-slider-thumb {
     -webkit-appearance: none;
-    width: 14px; height: 14px;
+    width: 16px; height: 16px;
     border-radius: 50%;
     background: var(--gold);
     cursor: pointer;
-    box-shadow: 0 0 8px rgba(240,185,11,0.5);
+    box-shadow: 0 0 10px rgba(240,185,11,0.7);
+    border: 2px solid rgba(0,0,0,0.25);
+    transition: box-shadow 0.15s;
   }
+  input[type=range]:hover::-webkit-slider-thumb { box-shadow: 0 0 16px rgba(240,185,11,0.9); }
   .slider-val {
     font-size: 12px;
     color: var(--gold);
@@ -363,8 +367,8 @@
   .toggle-desc {
     font-size: 9px;
     color: var(--text-dim);
-    padding: 0 10px 8px;
-    line-height: 1.5;
+    padding: 0 10px 7px;
+    line-height: 1.4;
     background: var(--bg2);
   }
   .toggle-controls {
@@ -375,34 +379,29 @@
   }
   .toggle-row.active .toggle-controls { display: block; }
   .toggle-row.always-on .toggle-controls { display: block; border-top: 1px solid var(--border); }
-  .ctrl-row {
+  .ctrl-row { margin-bottom: 10px; }
+  .ctrl-row:last-child { margin-bottom: 0; }
+  .ctrl-row-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 6px;
+    margin-bottom: 5px;
   }
-  .ctrl-row:last-child { margin-bottom: 0; }
   .ctrl-label {
     font-size: 9px;
     color: var(--text-dim);
-    flex: 0 0 90px;
     text-transform: uppercase;
     letter-spacing: 1px;
   }
-  .ctrl-slider-wrap { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .ctrl-slider-wrap { display: flex; align-items: center; gap: 8px; }
   .ctrl-val {
-    font-size: 12px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 700;
     color: var(--gold);
-    min-width: 52px;
-    text-align: right;
-    flex-shrink: 0;
-    background: var(--gold-glow);
-    border: 1px solid rgba(240,185,11,0.2);
-    border-radius: 3px;
-    padding: 1px 5px;
+    text-shadow: 0 0 16px rgba(240,185,11,0.45);
     letter-spacing: 0.5px;
+    font-family: var(--display);
+    flex-shrink: 0;
   }
   .ctrl-num {
     width: 70px;
@@ -1047,7 +1046,7 @@
             </label>
             <span class="toggle-name">RSI Momentum Recovery</span>
           </div>
-          <div class="toggle-desc">The core signal. RSI must dip into the zone then cross back up — indicating a pullback has ended and momentum is recovering. Disable if you want to rely purely on MACD or volume signals instead.</div>
+          <div class="toggle-desc">RSI dips into the zone then crosses back up — pullback ended, momentum recovering.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">RSI Dip Low</span>
@@ -1076,7 +1075,7 @@
             </label>
             <span class="toggle-name">ADX Trend Strength</span>
           </div>
-          <div class="toggle-desc">ADX measures how strongly the market is trending. Below 20 means it's choppy sideways — the bot skips trades. Disable if you want to trade ranging markets or rely on MACD direction instead.</div>
+          <div class="toggle-desc">Filters choppy sideways markets. Bot skips trades when trend strength is below threshold.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Minimum ADX</span>
@@ -1097,7 +1096,7 @@
             </label>
             <span class="toggle-name">Volume Spike Confirmation</span>
           </div>
-          <div class="toggle-desc">Requires the entry candle to have unusually high trading volume. A volume spike means real buyers are stepping in, not just noise. Good filter to avoid false breakouts.</div>
+          <div class="toggle-desc">Entry candle must have elevated volume — confirms real buying pressure, not noise.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Min Volume Multiple</span>
@@ -1118,7 +1117,7 @@
             </label>
             <span class="toggle-name">MACD Confirmation</span>
           </div>
-          <div class="toggle-desc">MACD measures momentum direction. "Positive" means the fast average is above the slow one. "Turning Up" means momentum just flipped bullish — a stronger but rarer signal.</div>
+          <div class="toggle-desc">Confirm momentum direction. "Positive" = histogram above zero. "Turning Up" = just flipped bullish.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Mode</span>
@@ -1139,7 +1138,7 @@
             </label>
             <span class="toggle-name">Candle Body Filter</span>
           </div>
-          <div class="toggle-desc">Filters out weak indecisive candles (dojis). Requires the candle's body to be at least X% of its total high-to-low range. A body of 50%+ means price moved with conviction.</div>
+          <div class="toggle-desc">Rejects doji candles. Body must be ≥X% of candle range — conviction required to enter.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Min Body Size</span>
@@ -1160,7 +1159,7 @@
             </label>
             <span class="toggle-name">Min 24h Pair Volume</span>
           </div>
-          <div class="toggle-desc">Skips pairs with low daily trading volume. Low-volume pairs have wider spreads and erratic price moves that can create false signals and bad fills.</div>
+          <div class="toggle-desc">Skips low-volume pairs with wide spreads and erratic moves that cause bad fills.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Min Volume (USDT)</span>
@@ -1178,7 +1177,7 @@
             </label>
             <span class="toggle-name">Max Spread Filter</span>
           </div>
-          <div class="toggle-desc">Skips pairs where the gap between the buy and sell price is too large. A wide spread means you immediately lose money the moment you enter a trade.</div>
+          <div class="toggle-desc">Skips pairs with wide bid-ask spreads — a large spread means you're instantly at a loss.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Max Spread %</span>
@@ -1199,7 +1198,7 @@
             </label>
             <span class="toggle-name">Re-entry Cooldown</span>
           </div>
-          <div class="toggle-desc">After closing a trade on a pair, wait N hours before re-entering it. Prevents the bot from repeatedly entering the same bad trade on a pair that's chopping.</div>
+          <div class="toggle-desc">Wait N hours after closing a trade before re-entering the same pair.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Cooldown (hours)</span>
@@ -1220,7 +1219,7 @@
             <span class="toggle-name">ATR Volatility Stop</span>
             <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
           </div>
-          <div class="toggle-desc">The default stop. ATR (Average True Range) measures how much the price normally moves per candle. The stop is placed 1.5× that distance below entry — giving the trade room to breathe without being too loose.</div>
+          <div class="toggle-desc">Stop placed at N×ATR below entry — adapts to market volatility, giving trades room to breathe.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">ATR Multiplier</span>
@@ -1241,7 +1240,7 @@
             </label>
             <span class="toggle-name">Fixed % Stop Loss</span>
           </div>
-          <div class="toggle-desc">A simple stop at a fixed percentage below entry. If enabled alongside the ATR stop, whichever stop is tighter (closer to entry) wins — protecting you from oversized losses.</div>
+          <div class="toggle-desc">Simple fixed % stop below entry. If both stops enabled, the tighter one wins.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Stop Loss %</span>
@@ -1262,7 +1261,7 @@
             </label>
             <span class="toggle-name">Trailing Stop Loss</span>
           </div>
-          <div class="toggle-desc">A rolling stop that automatically moves up as price rises, locking in profit. It trails X% below the highest price the trade has ever reached. If price drops back by that %, the trade exits.</div>
+          <div class="toggle-desc">Rolls up with the price peak, locking in profit. Exits if price drops N% from the high.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Trail Distance</span>
@@ -1283,7 +1282,7 @@
             </label>
             <span class="toggle-name">Breakeven Stop</span>
           </div>
-          <div class="toggle-desc">After the first take profit target (TP1) is hit, the stop loss automatically moves to your entry price. This makes the remaining position risk-free — worst case you exit at zero gain.</div>
+          <div class="toggle-desc">After TP1 hits, stop moves to entry — the remaining position becomes risk-free.</div>
         </div>
 
         <!-- ═══ TAKE PROFIT ══════════════════════════════════ -->
@@ -1295,7 +1294,7 @@
             <span class="toggle-name">ATR Take Profit (TP1)</span>
             <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
           </div>
-          <div class="toggle-desc">The default take profit. Exits a portion of the position when price reaches 1.5× ATR above entry. After TP1, the remaining position trails the EMA20 line until it closes below it.</div>
+          <div class="toggle-desc">Exits N% of position at N×ATR above entry. Remainder trails EMA20 until it closes below.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">ATR Multiplier</span>
@@ -1323,7 +1322,7 @@
             </label>
             <span class="toggle-name">Fixed % Take Profit</span>
           </div>
-          <div class="toggle-desc">Instead of ATR-based TP1, exit at a simple fixed percentage above entry. Easier to reason about but doesn't adapt to market volatility the way ATR does.</div>
+          <div class="toggle-desc">Simple fixed % take profit above entry. Easier to reason about, less adaptive than ATR.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Take Profit %</span>
@@ -1344,7 +1343,7 @@
             </label>
             <span class="toggle-name">R-Multiple Target</span>
           </div>
-          <div class="toggle-desc">Takes profit at N× the initial risk. E.g. at 2R: if your stop is $1 away, TP is $2 away. This maintains a consistent risk-to-reward ratio regardless of volatility. Overrides other TP methods when enabled.</div>
+          <div class="toggle-desc">Target N× initial risk. At 2R: stop $1 away → TP $2 away. Overrides other TP methods.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">R Multiple</span>
@@ -1362,7 +1361,7 @@
             <span class="toggle-name">Time Stop</span>
             <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
           </div>
-          <div class="toggle-desc">If a trade is still at a loss after N hours, exit it. Prevents capital being tied up in a stalled trade indefinitely.</div>
+          <div class="toggle-desc">Exit losing trades after N hours — prevents stalled positions from tying up capital.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Max Hours</span>
@@ -1382,7 +1381,7 @@
             <span class="toggle-name">Risk Controls</span>
             <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
           </div>
-          <div class="toggle-desc">Risk per trade controls how much of your $100 is at stake if the stop loss is hit. Daily loss limit halts trading for the rest of the day if losses reach that threshold.</div>
+          <div class="toggle-desc">Risk % = max loss per trade if stop hits. Daily limit pauses the bot when total losses exceed threshold.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Risk Per Trade</span>
@@ -1416,7 +1415,7 @@
             <span class="toggle-name">Candle Interval</span>
             <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
           </div>
-          <div class="toggle-desc">How often the bot checks for signals. <strong style="color:var(--gold)">1h is recommended</strong> — the strategy was tuned for it. Shorter intervals fire more signals but with more noise and higher fees per trade. Loop timing auto-adjusts.</div>
+          <div class="toggle-desc">How often the bot scans for signals. <strong style="color:var(--gold)">1h recommended</strong> — tuned for the strategy. Shorter = more signals but noisier. Loop timing auto-adjusts.</div>
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">Interval</span>
@@ -1633,6 +1632,11 @@ function syncSlider(id) {
   } else {
     label.textContent = val.toFixed(1) + '%';
   }
+  // Gold fill track
+  const min = parseFloat(slider.min);
+  const max = parseFloat(slider.max);
+  const pct = ((val - min) / (max - min) * 100).toFixed(1);
+  slider.style.background = `linear-gradient(to right, var(--gold) 0%, var(--gold) ${pct}%, var(--border2) ${pct}%, var(--border2) 100%)`;
 }
 
 // ── Tabs ───────────────────────────────────────────────────────────
@@ -2198,6 +2202,26 @@ async function botStop() {
     pollLog();
   } catch(e) {}
 }
+
+// ── Restructure slider ctrl-rows → 2-line layout ───────────────────
+// Moves label+value to a header row; slider spans full width below
+(function() {
+  document.querySelectorAll('.ctrl-row').forEach(row => {
+    const wrap = row.querySelector('.ctrl-slider-wrap');
+    if (!wrap) return;
+    const label  = row.querySelector('.ctrl-label');
+    const val    = wrap.querySelector('.ctrl-val');
+    const slider = wrap.querySelector('input[type=range]');
+    if (!label || !val || !slider) return;
+    label.remove(); val.remove(); slider.remove(); wrap.remove();
+    const head = document.createElement('div');
+    head.className = 'ctrl-row-head';
+    head.appendChild(label);
+    head.appendChild(val);
+    row.appendChild(head);
+    row.appendChild(slider);
+  });
+})();
 
 // ── Polling Schedule ───────────────────────────────────────────────
 const ALL_SLIDERS = [
