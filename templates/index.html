@@ -2085,12 +2085,15 @@ async function saveRules() {
     interval:               g('r-interval')?.value || '1h',
   };
   try {
-    await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
-    showToast('Rules saved');
+    const res = await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
+    if (!res.ok) { showToast(`Save failed (${res.status})`); return; }
+    const data = await res.json();
+    const n = data.changes?.length ?? 0;
+    showToast(n > 0 ? `Saved — ${n} change${n > 1 ? 's' : ''} logged` : 'Saved — no changes');
     pollLog();
     pollTickers();
     pollOrders();
-  } catch(e) { showToast('Save failed'); }
+  } catch(e) { showToast('Save failed — check connection'); }
 }
 
 // ── Settings modal ─────────────────────────────────────────────────

@@ -376,9 +376,9 @@ def set_rules():
         for change in changes:
             eng._log("INFO", f"  ↳ {change}")
     else:
-        eng._log("INFO", "Rules saved (no changes detected)")
+        eng._log("INFO", "Rules saved (no changes)")
 
-    return jsonify(saved)
+    return jsonify({"rules": saved, "changes": changes})
 
 
 @app.route("/api/bot/start", methods=["POST"])
