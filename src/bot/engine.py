@@ -24,9 +24,10 @@ INTERVAL_SLEEP = {
 
 
 class BotEngine:
-    def __init__(self, binance_client):
-        self.client  = binance_client
-        self.pm      = PositionManager()
+    def __init__(self, binance_client, username: str = "default"):
+        self.client   = binance_client
+        self.username = username
+        self.pm       = PositionManager()
         self.running = False
         self.thread  = None
         self.log     = []
@@ -57,7 +58,7 @@ class BotEngine:
         self.stats["started_at"] = datetime.utcnow().isoformat()
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
-        interval = load_rules().get("interval", "1h")
+        interval = load_rules(self.username).get("interval", "1h")
         self._log("INFO", f"Bot started — RSI Momentum + EMA Trend Filter [{interval} candles]")
         return True
 
@@ -88,7 +89,7 @@ class BotEngine:
                     continue
 
                 self.stats["last_tick"] = datetime.utcnow().isoformat()
-                rules    = load_rules()
+                rules    = load_rules(self.username)
                 interval = rules.get("interval", "1h")
                 pairs    = rules.get("trade_pairs", ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"])
 

@@ -73,7 +73,7 @@ def get_engine(username: str) -> BotEngine:
     if username not in _engines:
         client = _make_client(username)
         _clients[username] = client
-        _engines[username] = BotEngine(client)
+        _engines[username] = BotEngine(client, username=username)
     return _engines[username]
 
 
