@@ -429,7 +429,6 @@
   }
 
   .save-rules-btn {
-    width: 100%;
     padding: 9px;
     font-family: var(--display);
     font-size: 10px;
@@ -442,9 +441,23 @@
     border-radius: var(--panel-radius);
     cursor: pointer;
     transition: all 0.15s;
-    margin-top: 4px;
   }
   .save-rules-btn:hover { background: rgba(240,185,11,0.2); }
+  .reset-defaults-btn {
+    padding: 9px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    color: var(--text-dim);
+    border-radius: var(--panel-radius);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .reset-defaults-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
 
   /* ── AI Decide button ────────────────────────────────── */
   .btn-ai {
@@ -1050,17 +1063,17 @@
           <div class="toggle-controls">
             <div class="ctrl-row">
               <span class="ctrl-label">RSI Dip Low</span>
-              <input type="number" class="ctrl-num" id="r-rsi-low" value="42" min="20" max="60" step="1">
+              <input type="number" class="ctrl-num" id="r-rsi-low" value="38" min="20" max="60" step="1">
             </div>
             <div class="ctrl-row">
               <span class="ctrl-label">RSI Dip High</span>
-              <input type="number" class="ctrl-num" id="r-rsi-high" value="55" min="40" max="70" step="1">
+              <input type="number" class="ctrl-num" id="r-rsi-high" value="52" min="40" max="70" step="1">
             </div>
             <div class="ctrl-row">
               <span class="ctrl-label">RSI Cross Level</span>
               <div class="ctrl-slider-wrap">
-                <input type="range" id="r-rsi-cross" min="40" max="60" step="1" value="50" oninput="syncSlider('rsi-cross')">
-                <span class="ctrl-val" id="sv-rsi-cross">50</span>
+                <input type="range" id="r-rsi-cross" min="40" max="60" step="1" value="48" oninput="syncSlider('rsi-cross')">
+                <span class="ctrl-val" id="sv-rsi-cross">48</span>
               </div>
             </div>
           </div>
@@ -1080,18 +1093,18 @@
             <div class="ctrl-row">
               <span class="ctrl-label">Minimum ADX</span>
               <div class="ctrl-slider-wrap">
-                <input type="range" id="r-adx-min" min="10" max="40" step="1" value="20" oninput="syncSlider('adx-min')">
-                <span class="ctrl-val" id="sv-adx-min">20</span>
+                <input type="range" id="r-adx-min" min="10" max="40" step="1" value="25" oninput="syncSlider('adx-min')">
+                <span class="ctrl-val" id="sv-adx-min">25</span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Volume spike -->
-        <div class="toggle-row" id="tr-volume-spike">
+        <div class="toggle-row active" id="tr-volume-spike">
           <div class="toggle-header">
             <label class="toggle-switch" style="flex-shrink:0">
-              <input type="checkbox" id="r-volume-spike-enabled" onchange="toggleRow('volume-spike')">
+              <input type="checkbox" id="r-volume-spike-enabled" onchange="toggleRow('volume-spike')" checked>
               <span class="toggle-track"></span>
             </label>
             <span class="toggle-name">Volume Spike Confirmation</span>
@@ -1109,10 +1122,10 @@
         </div>
 
         <!-- MACD -->
-        <div class="toggle-row" id="tr-macd">
+        <div class="toggle-row active" id="tr-macd">
           <div class="toggle-header">
             <label class="toggle-switch" style="flex-shrink:0">
-              <input type="checkbox" id="r-macd-enabled" onchange="toggleRow('macd')">
+              <input type="checkbox" id="r-macd-enabled" onchange="toggleRow('macd')" checked>
               <span class="toggle-track"></span>
             </label>
             <span class="toggle-name">MACD Confirmation</span>
@@ -1130,10 +1143,10 @@
         </div>
 
         <!-- Candle body filter -->
-        <div class="toggle-row" id="tr-body">
+        <div class="toggle-row active" id="tr-body">
           <div class="toggle-header">
             <label class="toggle-switch" style="flex-shrink:0">
-              <input type="checkbox" id="r-body-enabled" onchange="toggleRow('body')">
+              <input type="checkbox" id="r-body-enabled" onchange="toggleRow('body')" checked>
               <span class="toggle-track"></span>
             </label>
             <span class="toggle-name">Candle Body Filter</span>
@@ -1169,10 +1182,10 @@
         </div>
 
         <!-- Spread filter -->
-        <div class="toggle-row" id="tr-spread">
+        <div class="toggle-row active" id="tr-spread">
           <div class="toggle-header">
             <label class="toggle-switch" style="flex-shrink:0">
-              <input type="checkbox" id="r-spread-enabled" onchange="toggleRow('spread')">
+              <input type="checkbox" id="r-spread-enabled" onchange="toggleRow('spread')" checked>
               <span class="toggle-track"></span>
             </label>
             <span class="toggle-name">Max Spread Filter</span>
@@ -1190,10 +1203,10 @@
         </div>
 
         <!-- Cooldown -->
-        <div class="toggle-row" id="tr-cooldown">
+        <div class="toggle-row active" id="tr-cooldown">
           <div class="toggle-header">
             <label class="toggle-switch" style="flex-shrink:0">
-              <input type="checkbox" id="r-cooldown-enabled" onchange="toggleRow('cooldown')">
+              <input type="checkbox" id="r-cooldown-enabled" onchange="toggleRow('cooldown')" checked>
               <span class="toggle-track"></span>
             </label>
             <span class="toggle-name">Re-entry Cooldown</span>
@@ -1203,8 +1216,8 @@
             <div class="ctrl-row">
               <span class="ctrl-label">Cooldown (hours)</span>
               <div class="ctrl-slider-wrap">
-                <input type="range" id="r-cooldown-h" min="1" max="24" step="1" value="3" oninput="syncSlider('cooldown-h')">
-                <span class="ctrl-val" id="sv-cooldown-h">3h</span>
+                <input type="range" id="r-cooldown-h" min="1" max="24" step="1" value="4" oninput="syncSlider('cooldown-h')">
+                <span class="ctrl-val" id="sv-cooldown-h">4h</span>
               </div>
             </div>
           </div>
@@ -1224,8 +1237,8 @@
             <div class="ctrl-row">
               <span class="ctrl-label">ATR Multiplier</span>
               <div class="ctrl-slider-wrap">
-                <input type="range" id="r-atr-stop" min="0.5" max="5" step="0.5" value="1.5" oninput="syncSlider('atr-stop')">
-                <span class="ctrl-val" id="sv-atr-stop">1.5×</span>
+                <input type="range" id="r-atr-stop" min="0.5" max="5" step="0.5" value="2.0" oninput="syncSlider('atr-stop')">
+                <span class="ctrl-val" id="sv-atr-stop">2.0×</span>
               </div>
             </div>
           </div>
@@ -1253,10 +1266,10 @@
         </div>
 
         <!-- Trailing stop -->
-        <div class="toggle-row" id="tr-trail">
+        <div class="toggle-row active" id="tr-trail">
           <div class="toggle-header">
             <label class="toggle-switch" style="flex-shrink:0">
-              <input type="checkbox" id="r-trail-enabled" onchange="toggleRow('trail')">
+              <input type="checkbox" id="r-trail-enabled" onchange="toggleRow('trail')" checked>
               <span class="toggle-track"></span>
             </label>
             <span class="toggle-name">Trailing Stop Loss</span>
@@ -1266,18 +1279,18 @@
             <div class="ctrl-row">
               <span class="ctrl-label">Trail Distance</span>
               <div class="ctrl-slider-wrap">
-                <input type="range" id="r-trail-pct" min="0.5" max="10" step="0.5" value="2" oninput="syncSlider('trail-pct')">
-                <span class="ctrl-val" id="sv-trail-pct">2.0%</span>
+                <input type="range" id="r-trail-pct" min="0.5" max="10" step="0.5" value="2.5" oninput="syncSlider('trail-pct')">
+                <span class="ctrl-val" id="sv-trail-pct">2.5%</span>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Breakeven -->
-        <div class="toggle-row" id="tr-breakeven">
+        <div class="toggle-row active" id="tr-breakeven">
           <div class="toggle-header">
             <label class="toggle-switch" style="flex-shrink:0">
-              <input type="checkbox" id="r-breakeven-enabled" onchange="toggleRow('breakeven')">
+              <input type="checkbox" id="r-breakeven-enabled" onchange="toggleRow('breakeven')" checked>
               <span class="toggle-track"></span>
             </label>
             <span class="toggle-name">Breakeven Stop</span>
@@ -1299,15 +1312,15 @@
             <div class="ctrl-row">
               <span class="ctrl-label">ATR Multiplier</span>
               <div class="ctrl-slider-wrap">
-                <input type="range" id="r-atr-tp1" min="0.5" max="5" step="0.5" value="1.5" oninput="syncSlider('atr-tp1')">
-                <span class="ctrl-val" id="sv-atr-tp1">1.5×</span>
+                <input type="range" id="r-atr-tp1" min="0.5" max="5" step="0.5" value="2.5" oninput="syncSlider('atr-tp1')">
+                <span class="ctrl-val" id="sv-atr-tp1">2.5×</span>
               </div>
             </div>
             <div class="ctrl-row">
               <span class="ctrl-label">Exit % at TP1</span>
               <div class="ctrl-slider-wrap">
-                <input type="range" id="r-tp1-pct" min="10" max="90" step="10" value="40" oninput="syncSlider('tp1-pct')">
-                <span class="ctrl-val" id="sv-tp1-pct">40%</span>
+                <input type="range" id="r-tp1-pct" min="10" max="90" step="10" value="50" oninput="syncSlider('tp1-pct')">
+                <span class="ctrl-val" id="sv-tp1-pct">50%</span>
               </div>
             </div>
           </div>
@@ -1335,10 +1348,10 @@
         </div>
 
         <!-- R-multiple TP -->
-        <div class="toggle-row" id="tr-rmult">
+        <div class="toggle-row active" id="tr-rmult">
           <div class="toggle-header">
             <label class="toggle-switch" style="flex-shrink:0">
-              <input type="checkbox" id="r-rmult-enabled" onchange="toggleRow('rmult')">
+              <input type="checkbox" id="r-rmult-enabled" onchange="toggleRow('rmult')" checked>
               <span class="toggle-track"></span>
             </label>
             <span class="toggle-name">R-Multiple Target</span>
@@ -1348,8 +1361,8 @@
             <div class="ctrl-row">
               <span class="ctrl-label">R Multiple</span>
               <div class="ctrl-slider-wrap">
-                <input type="range" id="r-rmult-val" min="1" max="5" step="0.5" value="2" oninput="syncSlider('rmult-val')">
-                <span class="ctrl-val" id="sv-rmult-val">2.0R</span>
+                <input type="range" id="r-rmult-val" min="1" max="5" step="0.5" value="2.5" oninput="syncSlider('rmult-val')">
+                <span class="ctrl-val" id="sv-rmult-val">2.5R</span>
               </div>
             </div>
           </div>
@@ -1366,8 +1379,8 @@
             <div class="ctrl-row">
               <span class="ctrl-label">Max Hours</span>
               <div class="ctrl-slider-wrap">
-                <input type="range" id="r-time-stop" min="4" max="48" step="2" value="20" oninput="syncSlider('time-stop')">
-                <span class="ctrl-val" id="sv-time-stop">20h</span>
+                <input type="range" id="r-time-stop" min="4" max="48" step="2" value="24" oninput="syncSlider('time-stop')">
+                <span class="ctrl-val" id="sv-time-stop">24h</span>
               </div>
             </div>
           </div>
@@ -1438,7 +1451,10 @@
           <input type="text" class="pairs-input" id="r-pairs" value="BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT" placeholder="BTCUSDT,ETHUSDT,...">
         </div>
 
-        <button class="save-rules-btn" onclick="saveRules()">Save Rules</button>
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="save-rules-btn" onclick="saveRules()" style="flex:1">Save Rules</button>
+          <button class="reset-defaults-btn" onclick="resetDefaults()" title="Reset to recommended profit-optimised defaults">↺ Reset</button>
+        </div>
       </div>
     </div>
 
@@ -1942,14 +1958,14 @@ async function loadRules() {
     const d = await r.json();
 
     // Always-on numeric controls
-    document.getElementById('r-rsi-low').value    = d.rsi_dip_low          ?? 42;
-    document.getElementById('r-rsi-high').value   = d.rsi_dip_high         ?? 55;
-    document.getElementById('r-rsi-cross').value  = d.rsi_cross_level      ?? 50;
-    document.getElementById('r-adx-min').value    = d.adx_min              ?? 20;
-    document.getElementById('r-atr-stop').value   = d.atr_stop_mult        ?? 1.5;
-    document.getElementById('r-atr-tp1').value    = d.atr_tp1_mult         ?? 1.5;
-    document.getElementById('r-tp1-pct').value    = d.tp1_exit_pct         ?? 40;
-    document.getElementById('r-time-stop').value  = d.time_stop_candles    ?? 20;
+    document.getElementById('r-rsi-low').value    = d.rsi_dip_low          ?? 38;
+    document.getElementById('r-rsi-high').value   = d.rsi_dip_high         ?? 52;
+    document.getElementById('r-rsi-cross').value  = d.rsi_cross_level      ?? 48;
+    document.getElementById('r-adx-min').value    = d.adx_min              ?? 25;
+    document.getElementById('r-atr-stop').value   = d.atr_stop_mult        ?? 2.0;
+    document.getElementById('r-atr-tp1').value    = d.atr_tp1_mult         ?? 2.5;
+    document.getElementById('r-tp1-pct').value    = d.tp1_exit_pct         ?? 50;
+    document.getElementById('r-time-stop').value  = d.time_stop_candles    ?? 24;
     document.getElementById('r-risk-pct').value   = d.risk_per_trade_pct   ?? 1;
     document.getElementById('r-max-pos').value    = d.max_open_positions   ?? 3;
     document.getElementById('r-daily-loss').value = d.daily_loss_limit_pct ?? 3;
@@ -1957,39 +1973,39 @@ async function loadRules() {
     document.getElementById('r-interval').value   = d.interval              ?? '1h';
 
     // Toggle rows — enabled state + values
-    setToggle('rsi',  d.rsi_enabled !== false);   // default true
-    setToggle('adx',  d.adx_enabled !== false);   // default true
-    setToggle('volume-spike', d.volume_spike_enabled);
+    setToggle('rsi',  d.rsi_enabled !== false);
+    setToggle('adx',  d.adx_enabled !== false);
+    setToggle('volume-spike', d.volume_spike_enabled ?? true);
     document.getElementById('r-vol-mult').value   = d.volume_spike_mult    ?? 1.5;
 
-    setToggle('macd', d.macd_filter_enabled);
+    setToggle('macd', d.macd_filter_enabled ?? true);
     document.getElementById('r-macd-mode').value  = d.macd_mode            ?? 'positive';
 
-    setToggle('body', d.body_filter_enabled);
+    setToggle('body', d.body_filter_enabled ?? true);
     document.getElementById('r-body-pct').value   = d.body_filter_pct      ?? 50;
 
-    setToggle('minvol', d.min_volume_usdt_enabled);
-    document.getElementById('r-minvol-usdt').value = d.min_volume_usdt     ?? 5000000;
+    setToggle('minvol', d.min_volume_usdt_enabled ?? false);
+    document.getElementById('r-minvol-usdt').value = d.min_volume_usdt     ?? 10000000;
 
-    setToggle('spread', d.max_spread_enabled);
+    setToggle('spread', d.max_spread_enabled ?? true);
     document.getElementById('r-spread-pct').value = d.max_spread_pct       ?? 0.1;
 
-    setToggle('cooldown', d.cooldown_enabled);
-    document.getElementById('r-cooldown-h').value = d.cooldown_candles     ?? 3;
+    setToggle('cooldown', d.cooldown_enabled ?? true);
+    document.getElementById('r-cooldown-h').value = d.cooldown_candles     ?? 4;
 
-    setToggle('fixed-stop', d.fixed_stop_enabled);
+    setToggle('fixed-stop', d.fixed_stop_enabled ?? false);
     document.getElementById('r-fixed-stop-pct').value = d.fixed_stop_pct  ?? 3;
 
-    setToggle('trail', d.trailing_stop_enabled);
-    document.getElementById('r-trail-pct').value  = d.trailing_stop_pct    ?? 2;
+    setToggle('trail', d.trailing_stop_enabled ?? true);
+    document.getElementById('r-trail-pct').value  = d.trailing_stop_pct    ?? 2.5;
 
-    setToggle('breakeven', d.breakeven_stop_enabled);
+    setToggle('breakeven', d.breakeven_stop_enabled ?? true);
 
-    setToggle('fixed-tp', d.fixed_tp_enabled);
+    setToggle('fixed-tp', d.fixed_tp_enabled ?? false);
     document.getElementById('r-fixed-tp-pct').value = d.fixed_tp_pct      ?? 5;
 
-    setToggle('rmult', d.r_multiple_tp_enabled);
-    document.getElementById('r-rmult-val').value  = d.r_multiple           ?? 2;
+    setToggle('rmult', d.r_multiple_tp_enabled ?? true);
+    document.getElementById('r-rmult-val').value  = d.r_multiple           ?? 2.5;
 
     ALL_SLIDERS.forEach(syncSlider);
   } catch(e) {}
@@ -2182,6 +2198,57 @@ async function aiDecide() {
     btn.disabled = false;
     btn.textContent = '⚡ AI Decide';
   }
+}
+
+// ── Defaults & Reset ───────────────────────────────────────────────
+const DEFAULTS = {
+  rsi_enabled: true,    rsi_dip_low: 38,    rsi_dip_high: 52,  rsi_cross_level: 48,
+  adx_enabled: true,    adx_min: 25,
+  volume_spike_enabled: true,  volume_spike_mult: 1.5,
+  macd_filter_enabled: true,   macd_mode: 'positive',
+  body_filter_enabled: true,   body_filter_pct: 50,
+  min_volume_usdt_enabled: false, min_volume_usdt: 10000000,
+  max_spread_enabled: true,    max_spread_pct: 0.1,
+  cooldown_enabled: true,      cooldown_candles: 4,
+  atr_stop_mult: 2.0,
+  fixed_stop_enabled: false,   fixed_stop_pct: 3.0,
+  trailing_stop_enabled: true, trailing_stop_pct: 2.5,
+  breakeven_stop_enabled: true,
+  atr_tp1_mult: 2.5,           tp1_exit_pct: 50,
+  fixed_tp_enabled: false,     fixed_tp_pct: 5.0,
+  r_multiple_tp_enabled: true, r_multiple: 2.5,
+  time_stop_candles: 24,
+  risk_per_trade_pct: 1.0,     max_open_positions: 3,  daily_loss_limit_pct: 3.0,
+  trade_pairs: ['BTCUSDT','ETHUSDT','BNBUSDT','SOLUSDT','XRPUSDT'],
+  interval: '1h',
+};
+
+async function resetDefaults() {
+  if (!confirm('Reset all rules to recommended profit-optimised defaults?')) return;
+  const d = DEFAULTS;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+  set('r-rsi-low', d.rsi_dip_low);      set('r-rsi-high', d.rsi_dip_high);
+  set('r-rsi-cross', d.rsi_cross_level); set('r-adx-min', d.adx_min);
+  set('r-atr-stop', d.atr_stop_mult);   set('r-atr-tp1', d.atr_tp1_mult);
+  set('r-tp1-pct', d.tp1_exit_pct);     set('r-time-stop', d.time_stop_candles);
+  set('r-risk-pct', d.risk_per_trade_pct); set('r-max-pos', d.max_open_positions);
+  set('r-daily-loss', d.daily_loss_limit_pct); set('r-interval', d.interval);
+  set('r-pairs', d.trade_pairs.join(','));
+  setToggle('rsi', d.rsi_enabled);       setToggle('adx', d.adx_enabled);
+  setToggle('volume-spike', d.volume_spike_enabled); set('r-vol-mult', d.volume_spike_mult);
+  setToggle('macd', d.macd_filter_enabled);          set('r-macd-mode', d.macd_mode);
+  setToggle('body', d.body_filter_enabled);           set('r-body-pct', d.body_filter_pct);
+  setToggle('minvol', d.min_volume_usdt_enabled);    set('r-minvol-usdt', d.min_volume_usdt);
+  setToggle('spread', d.max_spread_enabled);          set('r-spread-pct', d.max_spread_pct);
+  setToggle('cooldown', d.cooldown_enabled);          set('r-cooldown-h', d.cooldown_candles);
+  setToggle('fixed-stop', d.fixed_stop_enabled);     set('r-fixed-stop-pct', d.fixed_stop_pct);
+  setToggle('trail', d.trailing_stop_enabled);        set('r-trail-pct', d.trailing_stop_pct);
+  setToggle('breakeven', d.breakeven_stop_enabled);
+  setToggle('fixed-tp', d.fixed_tp_enabled);          set('r-fixed-tp-pct', d.fixed_tp_pct);
+  setToggle('rmult', d.r_multiple_tp_enabled);        set('r-rmult-val', d.r_multiple);
+  ALL_SLIDERS.forEach(syncSlider);
+  await saveRules();
+  showToast('Reset to recommended defaults');
 }
 
 // ── Bot Control ────────────────────────────────────────────────────
