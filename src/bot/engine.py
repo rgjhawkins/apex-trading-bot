@@ -12,11 +12,15 @@ from src.bot.indicators import klines_to_df, compute_indicators, get_signal
 from src.bot.position_manager import PositionManager, MIN_NOTIONAL
 from src.bot.rules import load_rules
 
-INTERVAL           = "1h"
 KLINE_LIMIT        = 250
-LOOP_SLEEP         = 60
 MAX_DAILY_LOSS_PCT = 3.0
 TIME_STOP_CANDLES  = 20
+
+# Sleep between loop ticks — shorter intervals need faster polling
+INTERVAL_SLEEP = {
+    "1m": 10, "3m": 15, "5m": 20, "15m": 30,
+    "30m": 45, "1h": 60, "4h": 120, "1d": 300,
+}
 
 
 class BotEngine:
@@ -52,7 +56,8 @@ class BotEngine:
         self.stats["started_at"] = datetime.utcnow().isoformat()
         self.thread = threading.Thread(target=self._loop, daemon=True)
         self.thread.start()
-        self._log("INFO", "Bot started — strategy: RSI Momentum + EMA Trend Filter")
+        interval = load_rules().get("interval", "1h")
+        self._log("INFO", f"Bot started — RSI Momentum + EMA Trend Filter [{interval} candles]")
         return True
 
     def stop(self):
@@ -81,12 +86,13 @@ class BotEngine:
                     continue
 
                 self.stats["last_tick"] = datetime.utcnow().isoformat()
-                rules = load_rules()
-                pairs = rules.get("trade_pairs", ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"])
+                rules    = load_rules()
+                interval = rules.get("interval", "1h")
+                pairs    = rules.get("trade_pairs", ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"])
 
                 for symbol in pairs:
                     try:
-                        self._process_pair(symbol, rules)
+                        self._process_pair(symbol, rules, interval)
                     except Exception as e:
                         self._log("ERROR", f"{symbol}: {e}")
 
@@ -101,13 +107,13 @@ class BotEngine:
             except Exception as e:
                 self._log("ERROR", f"Loop error: {e}")
 
-            time.sleep(LOOP_SLEEP)
+            time.sleep(INTERVAL_SLEEP.get(rules.get("interval", "1h"), 60))
 
     # ── Per-pair processing ────────────────────────────────────────
 
-    def _process_pair(self, symbol: str, rules: dict):
+    def _process_pair(self, symbol: str, rules: dict, interval: str = "1h"):
         # Fetch & compute indicators
-        raw = self.client.client.get_klines(symbol=symbol, interval=INTERVAL, limit=KLINE_LIMIT)
+        raw = self.client.client.get_klines(symbol=symbol, interval=interval, limit=KLINE_LIMIT)
         df  = compute_indicators(klines_to_df(raw))
         if len(df) < 3:
             return

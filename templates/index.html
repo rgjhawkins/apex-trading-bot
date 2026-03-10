@@ -1180,6 +1180,31 @@
           </div>
         </div>
 
+        <!-- ═══ TIMEFRAME ════════════════════════════════════ -->
+        <div class="rule-section-title" style="margin-top:6px">Timeframe</div>
+
+        <div class="toggle-row always-on">
+          <div class="toggle-header">
+            <span class="toggle-name">Candle Interval</span>
+            <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
+          </div>
+          <div class="toggle-desc">How often the bot checks for signals. <strong style="color:var(--gold)">1h is recommended</strong> — the strategy was tuned for it. Shorter intervals fire more signals but with more noise and higher fees per trade. Loop timing auto-adjusts.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Interval</span>
+              <select class="ctrl-select" id="r-interval">
+                <option value="1m">1 minute  ⚠ very noisy</option>
+                <option value="5m">5 minutes ⚠ noisy</option>
+                <option value="15m">15 minutes</option>
+                <option value="30m">30 minutes</option>
+                <option value="1h" selected>1 hour ★ recommended</option>
+                <option value="4h">4 hours</option>
+                <option value="1d">1 day</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         <!-- Trade pairs -->
         <div class="rule-group" style="margin-top:10px">
           <label class="rule-label">Trade Pairs <span style="color:var(--text-dim)">(comma separated)</span></label>
@@ -1697,6 +1722,7 @@ async function loadRules() {
     document.getElementById('r-max-pos').value    = d.max_open_positions   ?? 3;
     document.getElementById('r-daily-loss').value = d.daily_loss_limit_pct ?? 3;
     document.getElementById('r-pairs').value      = (d.trade_pairs || []).join(',');
+    document.getElementById('r-interval').value   = d.interval              ?? '1h';
 
     // Toggle rows — enabled state + values
     setToggle('rsi',  d.rsi_enabled !== false);   // default true
@@ -1733,10 +1759,7 @@ async function loadRules() {
     setToggle('rmult', d.r_multiple_tp_enabled);
     document.getElementById('r-rmult-val').value  = d.r_multiple           ?? 2;
 
-    // Sync all sliders
-    ['rsi-cross','adx-min','atr-stop','atr-tp1','tp1-pct','time-stop',
-     'risk-pct','max-pos','daily-loss','vol-mult','body-pct','spread-pct',
-     'cooldown-h','fixed-stop-pct','trail-pct','fixed-tp-pct','rmult-val'].forEach(syncSlider);
+    ALL_SLIDERS.forEach(syncSlider);
   } catch(e) {}
 }
 
@@ -1787,6 +1810,7 @@ async function saveRules() {
     max_open_positions:     i('r-max-pos'),
     daily_loss_limit_pct:   f('r-daily-loss'),
     trade_pairs:            g('r-pairs').value.split(',').map(p => p.trim()).filter(Boolean),
+    interval:               g('r-interval')?.value || '1h',
   };
   try {
     await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
@@ -1816,7 +1840,14 @@ async function botStop() {
 }
 
 // ── Polling Schedule ───────────────────────────────────────────────
+const ALL_SLIDERS = [
+  'rsi-cross','adx-min','atr-stop','atr-tp1','tp1-pct','time-stop',
+  'risk-pct','max-pos','daily-loss','vol-mult','body-pct','spread-pct',
+  'cooldown-h','fixed-stop-pct','trail-pct','fixed-tp-pct','rmult-val',
+];
+
 async function init() {
+  ALL_SLIDERS.forEach(syncSlider);  // show defaults immediately
   await loadRules();
   await pollStatus();
   await Promise.all([pollPositions(), pollPortfolio(), pollTickers(), pollOrders(), pollLog()]);

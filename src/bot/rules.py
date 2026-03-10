@@ -6,6 +6,7 @@ RULES_FILE = os.path.join(os.path.dirname(__file__), "../../rules.json")
 DEFAULT_RULES = {
     # ── Pairs & execution ──────────────────────────────────────────
     "trade_pairs":              ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"],
+    "interval":                 "1h",      # candle timeframe: 1m 5m 15m 30m 1h 4h 1d
     "max_open_positions":       3,
 
     # ── Position sizing ────────────────────────────────────────────
