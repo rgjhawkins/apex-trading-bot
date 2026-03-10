@@ -325,6 +325,99 @@
   .toggle-switch input:checked + .toggle-track { background: var(--gold); }
   .toggle-switch input:checked + .toggle-track::after { transform: translateX(16px); background: #000; }
 
+  /* ── Toggle rows ────────────────────────────────────── */
+  .rule-section-title {
+    font-size: 9px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--gold-dim);
+    padding: 10px 0 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 10px;
+    font-weight: 600;
+  }
+  .toggle-row {
+    border: 1px solid var(--border);
+    border-radius: var(--panel-radius);
+    margin-bottom: 8px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .toggle-row.active { border-color: var(--gold-dim); }
+  .toggle-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    cursor: default;
+    background: var(--bg2);
+  }
+  .toggle-name {
+    font-family: var(--display);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--text);
+    flex: 1;
+  }
+  .toggle-row.active .toggle-name { color: var(--text-bright); }
+  .toggle-desc {
+    font-size: 9px;
+    color: var(--text-dim);
+    padding: 0 10px 8px;
+    line-height: 1.5;
+    background: var(--bg2);
+  }
+  .toggle-controls {
+    padding: 8px 10px;
+    background: var(--bg1);
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+  .toggle-row.active .toggle-controls { display: block; }
+  .toggle-row.always-on .toggle-controls { display: block; border-top: 1px solid var(--border); }
+  .ctrl-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .ctrl-row:last-child { margin-bottom: 0; }
+  .ctrl-label {
+    font-size: 9px;
+    color: var(--text-dim);
+    flex: 1;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .ctrl-slider-wrap { display: flex; align-items: center; gap: 6px; flex: 1; }
+  .ctrl-val { font-size: 11px; color: var(--gold); width: 40px; text-align: right; flex-shrink: 0; }
+  .ctrl-num {
+    width: 70px;
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--panel-radius);
+    padding: 4px 8px;
+    color: var(--text-bright);
+    font-family: var(--mono);
+    font-size: 11px;
+    outline: none;
+    text-align: right;
+  }
+  .ctrl-num:focus { border-color: var(--gold-dim); }
+  .ctrl-select {
+    background: var(--bg3);
+    border: 1px solid var(--border2);
+    border-radius: var(--panel-radius);
+    padding: 4px 8px;
+    color: var(--text-bright);
+    font-family: var(--mono);
+    font-size: 11px;
+    outline: none;
+    cursor: pointer;
+  }
+
   .save-rules-btn {
     width: 100%;
     padding: 9px;
@@ -710,107 +803,380 @@
     <div class="panel">
       <div class="panel-header">
         <span class="panel-title">Trading Rules</span>
+        <span class="panel-badge">LIVE</span>
       </div>
       <div class="rules-form">
 
-        <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);padding:4px 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px">
-          ENTRY FILTERS
-        </div>
+        <!-- ═══ ENTRY FILTERS ═══════════════════════════════ -->
+        <div class="rule-section-title">Entry Filters</div>
 
-        <div class="rule-group">
-          <label class="rule-label">RSI Dip Zone (low – high)</label>
-          <div style="display:flex;gap:6px">
-            <div class="rule-input-wrap" style="flex:1">
-              <input type="number" class="rule-input" id="r-rsi-low" value="42" min="20" max="60" step="1">
+        <!-- RSI + EMA trend — always on, no toggle -->
+        <div class="toggle-row always-on">
+          <div class="toggle-header">
+            <span class="toggle-name">RSI Momentum Recovery</span>
+            <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
+          </div>
+          <div class="toggle-desc">The core signal. RSI must dip into the zone then cross back up — indicating a pullback has ended and momentum is recovering. Pair this with the EMA trend stack being bullish (20 &gt; 50 &gt; 200).</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">RSI Dip Low</span>
+              <input type="number" class="ctrl-num" id="r-rsi-low" value="42" min="20" max="60" step="1">
             </div>
-            <div class="rule-input-wrap" style="flex:1">
-              <input type="number" class="rule-input" id="r-rsi-high" value="55" min="40" max="70" step="1">
+            <div class="ctrl-row">
+              <span class="ctrl-label">RSI Dip High</span>
+              <input type="number" class="ctrl-num" id="r-rsi-high" value="55" min="40" max="70" step="1">
+            </div>
+            <div class="ctrl-row">
+              <span class="ctrl-label">RSI Cross Level</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-rsi-cross" min="40" max="60" step="1" value="50" oninput="syncSlider('rsi-cross')">
+                <span class="ctrl-val" id="sv-rsi-cross">50</span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div class="rule-group">
-          <label class="rule-label">RSI Cross Level (recovery trigger)</label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-rsi-cross" min="40" max="60" step="1" value="50" oninput="syncSlider('rsi-cross')">
-            <span class="slider-val" id="sv-rsi-cross">50</span>
+        <!-- ADX — always on -->
+        <div class="toggle-row always-on">
+          <div class="toggle-header">
+            <span class="toggle-name">ADX Trend Strength</span>
+            <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
+          </div>
+          <div class="toggle-desc">ADX measures how strongly the market is trending. Below 20 means it's choppy sideways — the bot skips trades. Above 25 is a healthy trend.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Minimum ADX</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-adx-min" min="10" max="40" step="1" value="20" oninput="syncSlider('adx-min')">
+                <span class="ctrl-val" id="sv-adx-min">20</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="rule-group">
-          <label class="rule-label">ADX Minimum (trend strength)</label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-adx-min" min="10" max="40" step="1" value="20" oninput="syncSlider('adx-min')">
-            <span class="slider-val" id="sv-adx-min">20</span>
+        <!-- Volume spike -->
+        <div class="toggle-row" id="tr-volume-spike">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-volume-spike-enabled" onchange="toggleRow('volume-spike')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">Volume Spike Confirmation</span>
+          </div>
+          <div class="toggle-desc">Requires the entry candle to have unusually high trading volume. A volume spike means real buyers are stepping in, not just noise. Good filter to avoid false breakouts.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Min Volume Multiple</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-vol-mult" min="1.2" max="5" step="0.1" value="1.5" oninput="syncSlider('vol-mult')">
+                <span class="ctrl-val" id="sv-vol-mult">1.5×</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);padding:4px 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px;margin-top:6px">
-          STOP LOSS & TAKE PROFIT
-        </div>
-
-        <div class="rule-group">
-          <label class="rule-label">ATR Stop Multiplier <span style="color:var(--text-dim)">(stop = entry − ATR × X)</span></label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-atr-stop" min="0.5" max="5" step="0.5" value="1.5" oninput="syncSlider('atr-stop')">
-            <span class="slider-val" id="sv-atr-stop">1.5×</span>
+        <!-- MACD -->
+        <div class="toggle-row" id="tr-macd">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-macd-enabled" onchange="toggleRow('macd')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">MACD Confirmation</span>
+          </div>
+          <div class="toggle-desc">MACD measures momentum direction. "Positive" means the fast average is above the slow one. "Turning Up" means momentum just flipped bullish — a stronger but rarer signal.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Mode</span>
+              <select class="ctrl-select" id="r-macd-mode">
+                <option value="positive">Positive histogram</option>
+                <option value="turning_up">Turning up</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="rule-group">
-          <label class="rule-label">ATR TP1 Multiplier <span style="color:var(--text-dim)">(TP1 = entry + ATR × X)</span></label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-atr-tp1" min="0.5" max="5" step="0.5" value="1.5" oninput="syncSlider('atr-tp1')">
-            <span class="slider-val" id="sv-atr-tp1">1.5×</span>
+        <!-- Candle body filter -->
+        <div class="toggle-row" id="tr-body">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-body-enabled" onchange="toggleRow('body')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">Candle Body Filter</span>
+          </div>
+          <div class="toggle-desc">Filters out weak indecisive candles (dojis). Requires the candle's body to be at least X% of its total high-to-low range. A body of 50%+ means price moved with conviction.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Min Body Size</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-body-pct" min="20" max="80" step="5" value="50" oninput="syncSlider('body-pct')">
+                <span class="ctrl-val" id="sv-body-pct">50%</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="rule-group">
-          <label class="rule-label">TP1 Exit Size <span style="color:var(--text-dim)">(% of position to close at TP1)</span></label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-tp1-pct" min="10" max="90" step="10" value="40" oninput="syncSlider('tp1-pct')">
-            <span class="slider-val" id="sv-tp1-pct">40%</span>
+        <!-- Min 24h volume -->
+        <div class="toggle-row" id="tr-minvol">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-minvol-enabled" onchange="toggleRow('minvol')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">Min 24h Pair Volume</span>
+          </div>
+          <div class="toggle-desc">Skips pairs with low daily trading volume. Low-volume pairs have wider spreads and erratic price moves that can create false signals and bad fills.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Min Volume (USDT)</span>
+              <input type="number" class="ctrl-num" id="r-minvol-usdt" value="5000000" min="100000" step="500000" style="width:90px">
+            </div>
           </div>
         </div>
 
-        <div class="rule-group">
-          <label class="rule-label">Time Stop <span style="color:var(--text-dim)">(exit losing trade after N candles)</span></label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-time-stop" min="4" max="48" step="2" value="20" oninput="syncSlider('time-stop')">
-            <span class="slider-val" id="sv-time-stop">20h</span>
+        <!-- Spread filter -->
+        <div class="toggle-row" id="tr-spread">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-spread-enabled" onchange="toggleRow('spread')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">Max Spread Filter</span>
+          </div>
+          <div class="toggle-desc">Skips pairs where the gap between the buy and sell price is too large. A wide spread means you immediately lose money the moment you enter a trade.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Max Spread %</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-spread-pct" min="0.05" max="1" step="0.05" value="0.1" oninput="syncSlider('spread-pct')">
+                <span class="ctrl-val" id="sv-spread-pct">0.1%</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div style="font-size:9px;letter-spacing:1px;color:var(--text-dim);padding:4px 0 10px;border-bottom:1px solid var(--border);margin-bottom:10px;margin-top:6px">
-          RISK & POSITION SIZING
-        </div>
-
-        <div class="rule-group">
-          <label class="rule-label">Risk Per Trade <span style="color:var(--text-dim)">(% of $100 capital)</span></label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-risk-pct" min="0.5" max="5" step="0.5" value="1" oninput="syncSlider('risk-pct')">
-            <span class="slider-val" id="sv-risk-pct">1.0%</span>
+        <!-- Cooldown -->
+        <div class="toggle-row" id="tr-cooldown">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-cooldown-enabled" onchange="toggleRow('cooldown')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">Re-entry Cooldown</span>
+          </div>
+          <div class="toggle-desc">After closing a trade on a pair, wait N hours before re-entering it. Prevents the bot from repeatedly entering the same bad trade on a pair that's chopping.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Cooldown (hours)</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-cooldown-h" min="1" max="24" step="1" value="3" oninput="syncSlider('cooldown-h')">
+                <span class="ctrl-val" id="sv-cooldown-h">3h</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="rule-group">
-          <label class="rule-label">Max Open Positions</label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-max-pos" min="1" max="10" step="1" value="3" oninput="syncSlider('max-pos')">
-            <span class="slider-val" id="sv-max-pos">3</span>
+        <!-- ═══ STOP LOSS ════════════════════════════════════ -->
+        <div class="rule-section-title" style="margin-top:6px">Stop Loss</div>
+
+        <!-- ATR Stop — always on -->
+        <div class="toggle-row always-on">
+          <div class="toggle-header">
+            <span class="toggle-name">ATR Volatility Stop</span>
+            <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
+          </div>
+          <div class="toggle-desc">The default stop. ATR (Average True Range) measures how much the price normally moves per candle. The stop is placed 1.5× that distance below entry — giving the trade room to breathe without being too loose.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">ATR Multiplier</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-atr-stop" min="0.5" max="5" step="0.5" value="1.5" oninput="syncSlider('atr-stop')">
+                <span class="ctrl-val" id="sv-atr-stop">1.5×</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="rule-group">
-          <label class="rule-label">Daily Loss Limit</label>
-          <div class="rule-slider-wrap">
-            <input type="range" id="r-daily-loss" min="1" max="10" step="0.5" value="3" oninput="syncSlider('daily-loss')">
-            <span class="slider-val" id="sv-daily-loss">3.0%</span>
+        <!-- Fixed % stop -->
+        <div class="toggle-row" id="tr-fixed-stop">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-fixed-stop-enabled" onchange="toggleRow('fixed-stop')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">Fixed % Stop Loss</span>
+          </div>
+          <div class="toggle-desc">A simple stop at a fixed percentage below entry. If enabled alongside the ATR stop, whichever stop is tighter (closer to entry) wins — protecting you from oversized losses.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Stop Loss %</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-fixed-stop-pct" min="0.5" max="10" step="0.5" value="3" oninput="syncSlider('fixed-stop-pct')">
+                <span class="ctrl-val" id="sv-fixed-stop-pct">3.0%</span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="rule-group">
-          <label class="rule-label">Trade Pairs</label>
+        <!-- Trailing stop -->
+        <div class="toggle-row" id="tr-trail">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-trail-enabled" onchange="toggleRow('trail')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">Trailing Stop Loss</span>
+          </div>
+          <div class="toggle-desc">A rolling stop that automatically moves up as price rises, locking in profit. It trails X% below the highest price the trade has ever reached. If price drops back by that %, the trade exits.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Trail Distance</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-trail-pct" min="0.5" max="10" step="0.5" value="2" oninput="syncSlider('trail-pct')">
+                <span class="ctrl-val" id="sv-trail-pct">2.0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Breakeven -->
+        <div class="toggle-row" id="tr-breakeven">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-breakeven-enabled" onchange="toggleRow('breakeven')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">Breakeven Stop</span>
+          </div>
+          <div class="toggle-desc">After the first take profit target (TP1) is hit, the stop loss automatically moves to your entry price. This makes the remaining position risk-free — worst case you exit at zero gain.</div>
+        </div>
+
+        <!-- ═══ TAKE PROFIT ══════════════════════════════════ -->
+        <div class="rule-section-title" style="margin-top:6px">Take Profit</div>
+
+        <!-- ATR TP1 — always on -->
+        <div class="toggle-row always-on">
+          <div class="toggle-header">
+            <span class="toggle-name">ATR Take Profit (TP1)</span>
+            <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
+          </div>
+          <div class="toggle-desc">The default take profit. Exits a portion of the position when price reaches 1.5× ATR above entry. After TP1, the remaining position trails the EMA20 line until it closes below it.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">ATR Multiplier</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-atr-tp1" min="0.5" max="5" step="0.5" value="1.5" oninput="syncSlider('atr-tp1')">
+                <span class="ctrl-val" id="sv-atr-tp1">1.5×</span>
+              </div>
+            </div>
+            <div class="ctrl-row">
+              <span class="ctrl-label">Exit % at TP1</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-tp1-pct" min="10" max="90" step="10" value="40" oninput="syncSlider('tp1-pct')">
+                <span class="ctrl-val" id="sv-tp1-pct">40%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fixed % TP -->
+        <div class="toggle-row" id="tr-fixed-tp">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-fixed-tp-enabled" onchange="toggleRow('fixed-tp')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">Fixed % Take Profit</span>
+          </div>
+          <div class="toggle-desc">Instead of ATR-based TP1, exit at a simple fixed percentage above entry. Easier to reason about but doesn't adapt to market volatility the way ATR does.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Take Profit %</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-fixed-tp-pct" min="0.5" max="20" step="0.5" value="5" oninput="syncSlider('fixed-tp-pct')">
+                <span class="ctrl-val" id="sv-fixed-tp-pct">5.0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- R-multiple TP -->
+        <div class="toggle-row" id="tr-rmult">
+          <div class="toggle-header">
+            <label class="toggle-switch" style="flex-shrink:0">
+              <input type="checkbox" id="r-rmult-enabled" onchange="toggleRow('rmult')">
+              <span class="toggle-track"></span>
+            </label>
+            <span class="toggle-name">R-Multiple Target</span>
+          </div>
+          <div class="toggle-desc">Takes profit at N× the initial risk. E.g. at 2R: if your stop is $1 away, TP is $2 away. This maintains a consistent risk-to-reward ratio regardless of volatility. Overrides other TP methods when enabled.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">R Multiple</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-rmult-val" min="1" max="5" step="0.5" value="2" oninput="syncSlider('rmult-val')">
+                <span class="ctrl-val" id="sv-rmult-val">2.0R</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Time stop -->
+        <div class="toggle-row always-on">
+          <div class="toggle-header">
+            <span class="toggle-name">Time Stop</span>
+            <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
+          </div>
+          <div class="toggle-desc">If a trade is still at a loss after N hours, exit it. Prevents capital being tied up in a stalled trade indefinitely.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Max Hours</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-time-stop" min="4" max="48" step="2" value="20" oninput="syncSlider('time-stop')">
+                <span class="ctrl-val" id="sv-time-stop">20h</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══ RISK & SIZING ════════════════════════════════ -->
+        <div class="rule-section-title" style="margin-top:6px">Risk & Position Sizing</div>
+
+        <div class="toggle-row always-on">
+          <div class="toggle-header">
+            <span class="toggle-name">Risk Controls</span>
+            <span style="font-size:9px;color:var(--green);letter-spacing:1px">ALWAYS ON</span>
+          </div>
+          <div class="toggle-desc">Risk per trade controls how much of your $100 is at stake if the stop loss is hit. Daily loss limit halts trading for the rest of the day if losses reach that threshold.</div>
+          <div class="toggle-controls">
+            <div class="ctrl-row">
+              <span class="ctrl-label">Risk Per Trade</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-risk-pct" min="0.5" max="5" step="0.5" value="1" oninput="syncSlider('risk-pct')">
+                <span class="ctrl-val" id="sv-risk-pct">1.0%</span>
+              </div>
+            </div>
+            <div class="ctrl-row">
+              <span class="ctrl-label">Max Positions</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-max-pos" min="1" max="10" step="1" value="3" oninput="syncSlider('max-pos')">
+                <span class="ctrl-val" id="sv-max-pos">3</span>
+              </div>
+            </div>
+            <div class="ctrl-row">
+              <span class="ctrl-label">Daily Loss Limit</span>
+              <div class="ctrl-slider-wrap">
+                <input type="range" id="r-daily-loss" min="1" max="15" step="0.5" value="3" oninput="syncSlider('daily-loss')">
+                <span class="ctrl-val" id="sv-daily-loss">3.0%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trade pairs -->
+        <div class="rule-group" style="margin-top:10px">
+          <label class="rule-label">Trade Pairs <span style="color:var(--text-dim)">(comma separated)</span></label>
           <input type="text" class="pairs-input" id="r-pairs" value="BTCUSDT,ETHUSDT,BNBUSDT,SOLUSDT,XRPUSDT" placeholder="BTCUSDT,ETHUSDT,...">
         </div>
 
@@ -976,20 +1342,35 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// ── Toggle Rows ─────────────────────────────────────────────────────
+function toggleRow(id) {
+  const checkbox = document.getElementById('r-' + id + '-enabled');
+  const row = document.getElementById('tr-' + id);
+  if (!row || !checkbox) return;
+  row.classList.toggle('active', checkbox.checked);
+}
+
 // ── Sliders ────────────────────────────────────────────────────────
 function syncSlider(id) {
   const slider = document.getElementById('r-' + id);
   const label  = document.getElementById('sv-' + id);
+  if (!slider || !label) return;
   const val = parseFloat(slider.value);
-  const noUnit  = ['max-pos', 'rsi-cross', 'adx-min', 'time-stop'];
-  const multUnit = ['atr-stop', 'atr-tp1'];
-  const hourUnit = ['time-stop'];
-  if (noUnit.includes(id) && !hourUnit.includes(id)) {
+  const multUnit  = ['atr-stop', 'atr-tp1', 'vol-mult'];
+  const rUnit     = ['rmult-val'];
+  const hourUnit  = ['time-stop', 'cooldown-h'];
+  const plainUnit = ['max-pos', 'rsi-cross', 'adx-min'];
+  const dec2Unit  = ['spread-pct'];
+  if (plainUnit.includes(id)) {
     label.textContent = val;
   } else if (hourUnit.includes(id)) {
     label.textContent = val + 'h';
   } else if (multUnit.includes(id)) {
     label.textContent = val.toFixed(1) + '×';
+  } else if (rUnit.includes(id)) {
+    label.textContent = val.toFixed(1) + 'R';
+  } else if (dec2Unit.includes(id)) {
+    label.textContent = val.toFixed(2) + '%';
   } else {
     label.textContent = val.toFixed(1) + '%';
   }
@@ -1284,40 +1665,118 @@ async function pollLog() {
 }
 
 // ── Rules Load/Save ────────────────────────────────────────────────
+function setToggle(id, val) {
+  const cb  = document.getElementById('r-' + id + '-enabled');
+  const row = document.getElementById('tr-' + id);
+  if (!cb || !row) return;
+  cb.checked = !!val;
+  row.classList.toggle('active', !!val);
+}
+
 async function loadRules() {
   try {
     const r = await fetch('/api/rules');
     const d = await r.json();
-    document.getElementById('r-rsi-low').value   = d.rsi_dip_low    ?? 42;
-    document.getElementById('r-rsi-high').value  = d.rsi_dip_high   ?? 55;
-    document.getElementById('r-rsi-cross').value = d.rsi_cross_level ?? 50;
-    document.getElementById('r-adx-min').value   = d.adx_min        ?? 20;
-    document.getElementById('r-atr-stop').value  = d.atr_stop_mult  ?? 1.5;
-    document.getElementById('r-atr-tp1').value   = d.atr_tp1_mult   ?? 1.5;
-    document.getElementById('r-tp1-pct').value   = d.tp1_exit_pct   ?? 40;
-    document.getElementById('r-time-stop').value = d.time_stop_candles ?? 20;
-    document.getElementById('r-risk-pct').value  = d.risk_per_trade_pct ?? 1;
-    document.getElementById('r-max-pos').value   = d.max_open_positions ?? 3;
+
+    // Always-on numeric controls
+    document.getElementById('r-rsi-low').value    = d.rsi_dip_low          ?? 42;
+    document.getElementById('r-rsi-high').value   = d.rsi_dip_high         ?? 55;
+    document.getElementById('r-rsi-cross').value  = d.rsi_cross_level      ?? 50;
+    document.getElementById('r-adx-min').value    = d.adx_min              ?? 20;
+    document.getElementById('r-atr-stop').value   = d.atr_stop_mult        ?? 1.5;
+    document.getElementById('r-atr-tp1').value    = d.atr_tp1_mult         ?? 1.5;
+    document.getElementById('r-tp1-pct').value    = d.tp1_exit_pct         ?? 40;
+    document.getElementById('r-time-stop').value  = d.time_stop_candles    ?? 20;
+    document.getElementById('r-risk-pct').value   = d.risk_per_trade_pct   ?? 1;
+    document.getElementById('r-max-pos').value    = d.max_open_positions   ?? 3;
     document.getElementById('r-daily-loss').value = d.daily_loss_limit_pct ?? 3;
-    document.getElementById('r-pairs').value     = (d.trade_pairs || []).join(',');
-    ['rsi-cross','adx-min','atr-stop','atr-tp1','tp1-pct','time-stop','risk-pct','max-pos','daily-loss'].forEach(syncSlider);
+    document.getElementById('r-pairs').value      = (d.trade_pairs || []).join(',');
+
+    // Toggle rows — enabled state + values
+    setToggle('volume-spike', d.volume_spike_enabled);
+    document.getElementById('r-vol-mult').value   = d.volume_spike_mult    ?? 1.5;
+
+    setToggle('macd', d.macd_filter_enabled);
+    document.getElementById('r-macd-mode').value  = d.macd_mode            ?? 'positive';
+
+    setToggle('body', d.body_filter_enabled);
+    document.getElementById('r-body-pct').value   = d.body_filter_pct      ?? 50;
+
+    setToggle('minvol', d.min_volume_usdt_enabled);
+    document.getElementById('r-minvol-usdt').value = d.min_volume_usdt     ?? 5000000;
+
+    setToggle('spread', d.max_spread_enabled);
+    document.getElementById('r-spread-pct').value = d.max_spread_pct       ?? 0.1;
+
+    setToggle('cooldown', d.cooldown_enabled);
+    document.getElementById('r-cooldown-h').value = d.cooldown_candles     ?? 3;
+
+    setToggle('fixed-stop', d.fixed_stop_enabled);
+    document.getElementById('r-fixed-stop-pct').value = d.fixed_stop_pct  ?? 3;
+
+    setToggle('trail', d.trailing_stop_enabled);
+    document.getElementById('r-trail-pct').value  = d.trailing_stop_pct    ?? 2;
+
+    setToggle('breakeven', d.breakeven_stop_enabled);
+
+    setToggle('fixed-tp', d.fixed_tp_enabled);
+    document.getElementById('r-fixed-tp-pct').value = d.fixed_tp_pct      ?? 5;
+
+    setToggle('rmult', d.r_multiple_tp_enabled);
+    document.getElementById('r-rmult-val').value  = d.r_multiple           ?? 2;
+
+    // Sync all sliders
+    ['rsi-cross','adx-min','atr-stop','atr-tp1','tp1-pct','time-stop',
+     'risk-pct','max-pos','daily-loss','vol-mult','body-pct','spread-pct',
+     'cooldown-h','fixed-stop-pct','trail-pct','fixed-tp-pct','rmult-val'].forEach(syncSlider);
   } catch(e) {}
 }
 
 async function saveRules() {
+  const g = id => document.getElementById(id);
+  const f = id => parseFloat(g(id)?.value) || 0;
+  const i = id => parseInt(g(id)?.value)   || 0;
+  const b = id => !!(g(id)?.checked);
+
   const rules = {
-    rsi_dip_low:          parseFloat(document.getElementById('r-rsi-low').value),
-    rsi_dip_high:         parseFloat(document.getElementById('r-rsi-high').value),
-    rsi_cross_level:      parseFloat(document.getElementById('r-rsi-cross').value),
-    adx_min:              parseFloat(document.getElementById('r-adx-min').value),
-    atr_stop_mult:        parseFloat(document.getElementById('r-atr-stop').value),
-    atr_tp1_mult:         parseFloat(document.getElementById('r-atr-tp1').value),
-    tp1_exit_pct:         parseFloat(document.getElementById('r-tp1-pct').value),
-    time_stop_candles:    parseInt(document.getElementById('r-time-stop').value),
-    risk_per_trade_pct:   parseFloat(document.getElementById('r-risk-pct').value),
-    max_open_positions:   parseInt(document.getElementById('r-max-pos').value),
-    daily_loss_limit_pct: parseFloat(document.getElementById('r-daily-loss').value),
-    trade_pairs:          document.getElementById('r-pairs').value.split(',').map(p => p.trim()).filter(Boolean),
+    // Core entry
+    rsi_dip_low:            f('r-rsi-low'),
+    rsi_dip_high:           f('r-rsi-high'),
+    rsi_cross_level:        f('r-rsi-cross'),
+    adx_min:                f('r-adx-min'),
+    // Optional entry filters
+    volume_spike_enabled:   b('r-volume-spike-enabled'),
+    volume_spike_mult:      f('r-vol-mult'),
+    macd_filter_enabled:    b('r-macd-enabled'),
+    macd_mode:              g('r-macd-mode')?.value || 'positive',
+    body_filter_enabled:    b('r-body-enabled'),
+    body_filter_pct:        f('r-body-pct'),
+    min_volume_usdt_enabled:b('r-minvol-enabled'),
+    min_volume_usdt:        f('r-minvol-usdt'),
+    max_spread_enabled:     b('r-spread-enabled'),
+    max_spread_pct:         f('r-spread-pct'),
+    cooldown_enabled:       b('r-cooldown-enabled'),
+    cooldown_candles:       i('r-cooldown-h'),
+    // Stop loss
+    atr_stop_mult:          f('r-atr-stop'),
+    fixed_stop_enabled:     b('r-fixed-stop-enabled'),
+    fixed_stop_pct:         f('r-fixed-stop-pct'),
+    trailing_stop_enabled:  b('r-trail-enabled'),
+    trailing_stop_pct:      f('r-trail-pct'),
+    breakeven_stop_enabled: b('r-breakeven-enabled'),
+    // Take profit
+    atr_tp1_mult:           f('r-atr-tp1'),
+    tp1_exit_pct:           f('r-tp1-pct'),
+    fixed_tp_enabled:       b('r-fixed-tp-enabled'),
+    fixed_tp_pct:           f('r-fixed-tp-pct'),
+    r_multiple_tp_enabled:  b('r-rmult-enabled'),
+    r_multiple:             f('r-rmult-val'),
+    // Risk & sizing
+    time_stop_candles:      i('r-time-stop'),
+    risk_per_trade_pct:     f('r-risk-pct'),
+    max_open_positions:     i('r-max-pos'),
+    daily_loss_limit_pct:   f('r-daily-loss'),
+    trade_pairs:            g('r-pairs').value.split(',').map(p => p.trim()).filter(Boolean),
   };
   try {
     await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
