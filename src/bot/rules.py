@@ -56,8 +56,8 @@ DEFAULT_RULES = {
     "fixed_tp_enabled":         False,
     "fixed_tp_pct":             5.0,
 
-    "r_multiple_tp_enabled":    True,      # full target at 2.5× initial risk = 2.5:1 RR
-    "r_multiple":               2.5,
+    "r_multiple_tp_enabled":    True,      # full target at 2.0× initial risk = 2:1 RR
+    "r_multiple":               2.0,
 
     # ── Time stop ─────────────────────────────────────────────────
     "time_stop_candles":        24,        # exit losing trade after 24h (1 full day)
