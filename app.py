@@ -243,10 +243,72 @@ def get_rules():
     return jsonify(load_rules())
 
 
+_RULE_LABELS = {
+    "rsi_enabled":            "RSI filter",
+    "rsi_dip_low":            "RSI dip low",
+    "rsi_dip_high":           "RSI dip high",
+    "rsi_cross_level":        "RSI cross level",
+    "adx_enabled":            "ADX filter",
+    "adx_min":                "ADX minimum",
+    "volume_spike_enabled":   "Volume spike",
+    "volume_spike_mult":      "Volume spike mult",
+    "macd_filter_enabled":    "MACD filter",
+    "macd_mode":              "MACD mode",
+    "body_filter_enabled":    "Candle body filter",
+    "body_filter_pct":        "Body filter %",
+    "min_volume_usdt_enabled":"Min volume filter",
+    "min_volume_usdt":        "Min volume (USDT)",
+    "max_spread_enabled":     "Spread filter",
+    "max_spread_pct":         "Max spread %",
+    "cooldown_enabled":       "Re-entry cooldown",
+    "cooldown_candles":       "Cooldown hours",
+    "atr_stop_mult":          "ATR stop mult",
+    "fixed_stop_enabled":     "Fixed stop",
+    "fixed_stop_pct":         "Fixed stop %",
+    "trailing_stop_enabled":  "Trailing stop",
+    "trailing_stop_pct":      "Trailing stop %",
+    "breakeven_stop_enabled": "Breakeven stop",
+    "atr_tp1_mult":           "ATR TP1 mult",
+    "tp1_exit_pct":           "TP1 exit %",
+    "fixed_tp_enabled":       "Fixed TP",
+    "fixed_tp_pct":           "Fixed TP %",
+    "r_multiple_tp_enabled":  "R-Multiple TP",
+    "r_multiple":             "R-Multiple",
+    "time_stop_candles":      "Time stop (h)",
+    "risk_per_trade_pct":     "Risk per trade %",
+    "max_open_positions":     "Max positions",
+    "daily_loss_limit_pct":   "Daily loss limit %",
+    "trade_pairs":            "Trade pairs",
+    "interval":               "Interval",
+}
+
+def _fmt(val):
+    if isinstance(val, bool):
+        return "ON" if val else "OFF"
+    if isinstance(val, list):
+        return ", ".join(str(v) for v in val)
+    if isinstance(val, float) and val == int(val):
+        return str(int(val))
+    return str(val)
+
 @app.route("/api/rules", methods=["POST"])
 def set_rules():
-    saved = save_rules(request.json or {})
-    engine._log("INFO", "Trading rules updated")
+    current = load_rules()
+    saved   = save_rules(request.json or {})
+
+    changes = [
+        f"{_RULE_LABELS[k]}: {_fmt(current.get(k))} → {_fmt(saved.get(k))}"
+        for k in _RULE_LABELS
+        if current.get(k) != saved.get(k)
+    ]
+
+    if changes:
+        engine._log("INFO", f"Rules updated — {len(changes)} change{'s' if len(changes) > 1 else ''}")
+        for change in changes:
+            engine._log("INFO", f"  ↳ {change}")
+    else:
+        engine._log("INFO", "Rules saved (no changes detected)")
+
     return jsonify(saved)
 
 
