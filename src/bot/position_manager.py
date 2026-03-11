@@ -1,8 +1,18 @@
 import json
+import math
 import os
 from dataclasses import dataclass, asdict, field
 from datetime import datetime
 from typing import Optional
+
+
+def _floor_to_step(qty: float, step_size: float) -> float:
+    """Truncate qty down to the nearest valid lot-size step (never round up)."""
+    if step_size <= 0:
+        return round(qty, 6)
+    precision = max(0, round(-math.log10(step_size)))
+    factor    = 10 ** precision
+    return math.floor(qty * factor) / factor
 
 _DATA_DIR      = "/data" if os.path.isdir("/data") else os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
 POSITIONS_FILE = os.path.join(_DATA_DIR, "positions.json")
@@ -76,7 +86,8 @@ class PositionManager:
 
     def calculate_size(self, entry_price: float, atr: float,
                        rules: dict = None,
-                       stop_override: float = None) -> tuple[float, float, float]:
+                       stop_override: float = None,
+                       step_size: float = 0.00001) -> tuple[float, float, float]:
         rules    = rules or {}
         risk_pct = rules.get("risk_per_trade_pct", 1.0) / 100.0
 
@@ -106,7 +117,8 @@ class PositionManager:
         if usdt_size < MIN_NOTIONAL:
             return 0.0, 0.0, stop_loss
 
-        return round(usdt_size / entry_price, 6), round(usdt_size, 2), round(stop_loss, 4)
+        qty = _floor_to_step(usdt_size / entry_price, step_size)
+        return qty, round(usdt_size, 2), round(stop_loss, 4)
 
     # ── Position lifecycle ─────────────────────────────────────────
 

@@ -38,6 +38,7 @@ class BotEngine:
 
         self._last_candle_time:    dict[str, int] = {}
         self._cooldown_until:      dict[str, int] = {}
+        self._step_size_cache:     dict[str, float] = {}   # symbol -> lot step size
         self._global_candle_count: int = 0
         self._daily_loss_halt      = False
         self._daily_loss_reset_date: str = ""
@@ -251,13 +252,28 @@ class BotEngine:
 
         self._enter_daytrading(symbol, result, rules)
 
+    # ── Exchange info helpers ──────────────────────────────────────
+
+    def _get_step_size(self, symbol: str) -> float:
+        """Return lot-size step for symbol, cached after first fetch."""
+        if symbol not in self._step_size_cache:
+            try:
+                info    = self.client.client.get_symbol_info(symbol)
+                filters = {f['filterType']: f for f in info['filters']}
+                step    = float(filters['LOT_SIZE']['stepSize'])
+            except Exception:
+                step = 0.00001
+            self._step_size_cache[symbol] = step
+        return self._step_size_cache[symbol]
+
     # ── Entry ──────────────────────────────────────────────────────
 
     def _enter(self, symbol: str, signal: dict, rules: dict):
         entry_price = signal["close"]
         atr         = signal["atr"]
 
-        qty, usdt_size, stop_loss = self.pm.calculate_size(entry_price, atr, rules)
+        step = self._get_step_size(symbol)
+        qty, usdt_size, stop_loss = self.pm.calculate_size(entry_price, atr, rules, step_size=step)
         if qty <= 0 or usdt_size < MIN_NOTIONAL:
             self._log("INFO", f"{symbol} — signal fired but position too small (${usdt_size:.2f})")
             return
@@ -304,8 +320,9 @@ class BotEngine:
         stop_loss   = round(entry_price * (1 - trail_pct / 100), 4)
         tp_price    = round(entry_price * (1 + tp_pct   / 100), 4)
 
+        step = self._get_step_size(symbol)
         qty, usdt_size, _ = self.pm.calculate_size(
-            entry_price, signal["atr"], rules, stop_override=stop_loss
+            entry_price, signal["atr"], rules, stop_override=stop_loss, step_size=step
         )
         if qty <= 0 or usdt_size < MIN_NOTIONAL:
             self._log("INFO", f"{symbol} — signal fired but position too small (${usdt_size:.2f})")
