@@ -1814,6 +1814,26 @@ function fmtTime(ts) {
   return new Date(ts).toLocaleTimeString('en-US', { hour12: false });
 }
 
+// ── Bot running state — update buttons/badge immediately ───────────
+function applyBotRunning(running) {
+  state.botRunning = running;
+  const bs = document.getElementById('bot-status');
+  const bt = document.getElementById('bot-status-text');
+  if (running) {
+    bs.style.cssText = 'background:rgba(0,192,127,0.1);border:1px solid rgba(0,192,127,0.3);color:var(--green);display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;';
+    bt.textContent = 'BOT RUNNING';
+    document.getElementById('btn-start').disabled = true;
+    document.getElementById('btn-stop').disabled = false;
+    document.getElementById('uptime-badge').style.display = '';
+  } else {
+    bs.style.cssText = 'background:rgba(90,96,144,0.1);border:1px solid var(--muted);color:var(--muted);display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;';
+    bt.textContent = 'BOT IDLE';
+    document.getElementById('btn-start').disabled = false;
+    document.getElementById('btn-stop').disabled = true;
+    document.getElementById('uptime-badge').style.display = 'none';
+  }
+}
+
 // ── Status Poll ────────────────────────────────────────────────────
 async function pollStatus() {
   try {
@@ -1821,31 +1841,14 @@ async function pollStatus() {
     const d = await r.json();
 
     state.connected  = d.connected;
-    state.botRunning = d.bot?.running || false;
     state.nextTickAt = d.bot?.next_tick_at || null;
+    applyBotRunning(d.bot?.running || false);
 
     // Connection badge
     const cs = document.getElementById('conn-status');
     cs.className = 'status-pill ' + (d.connected ? 'connected' : 'disconnected');
     document.getElementById('conn-text').textContent = d.connected ? 'CONNECTED' : 'DISCONNECTED';
     document.getElementById('net-badge').style.display = d.testnet ? '' : 'none';
-
-    // Bot status
-    const bs = document.getElementById('bot-status');
-    const bt = document.getElementById('bot-status-text');
-    if (state.botRunning) {
-      bs.style.cssText = 'background:rgba(0,192,127,0.1);border:1px solid rgba(0,192,127,0.3);color:var(--green);display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;';
-      bt.textContent = 'BOT RUNNING';
-      document.getElementById('btn-start').disabled = true;
-      document.getElementById('btn-stop').disabled = false;
-      document.getElementById('uptime-badge').style.display = '';
-    } else {
-      bs.style.cssText = 'background:rgba(90,96,144,0.1);border:1px solid var(--muted);color:var(--muted);display:flex;align-items:center;gap:6px;padding:3px 10px;border-radius:2px;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;font-weight:500;';
-      bt.textContent = 'BOT IDLE';
-      document.getElementById('btn-start').disabled = false;
-      document.getElementById('btn-stop').disabled = true;
-      document.getElementById('uptime-badge').style.display = 'none';
-    }
 
     // Stats
     const bot = d.bot || {};
@@ -2430,11 +2433,11 @@ async function botStart() {
     const res  = await fetch('/api/bot/start', { method: 'POST' });
     const data = await res.json();
     if (data.started) {
+      applyBotRunning(true);   // instant UI update — no poll round-trip needed
       showToast('Bot started');
     } else {
       showToast(data.reason || 'Could not start bot');
     }
-    pollStatus();
     pollLog();
   } catch(e) { showToast('Start request failed'); }
 }
@@ -2442,8 +2445,8 @@ async function botStart() {
 async function botStop() {
   try {
     await fetch('/api/bot/stop', { method: 'POST' });
+    applyBotRunning(false);    // instant UI update
     showToast('Bot stopped');
-    pollStatus();
     pollLog();
   } catch(e) {}
 }
