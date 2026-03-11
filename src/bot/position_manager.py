@@ -4,7 +4,8 @@ from dataclasses import dataclass, asdict, field
 from datetime import datetime
 from typing import Optional
 
-POSITIONS_FILE = os.path.join(os.path.dirname(__file__), "../../positions.json")
+_DATA_DIR      = "/data" if os.path.isdir("/data") else os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+POSITIONS_FILE = os.path.join(_DATA_DIR, "positions.json")
 STARTING_CAPITAL = 100.0
 MIN_NOTIONAL     = 15.0
 

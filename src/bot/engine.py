@@ -6,6 +6,7 @@ so changes in the dashboard take effect immediately.
 
 import threading
 import time
+from collections import deque
 from datetime import datetime, timedelta, timezone
 
 from src.bot.indicators import klines_to_df, compute_indicators, get_signal, get_daytrading_signal
@@ -28,9 +29,12 @@ class BotEngine:
         self.client   = binance_client
         self.username = username
         self.pm       = PositionManager()
-        self.running = False
-        self.thread  = None
-        self.log     = []
+        self.running  = False
+        self.thread   = None
+
+        self._log_lock  = threading.Lock()
+        self._log_deque: deque = deque(maxlen=500)
+        self._stop_event = threading.Event()
 
         self._last_candle_time:    dict[str, int] = {}
         self._cooldown_until:      dict[str, int] = {}
@@ -54,6 +58,7 @@ class BotEngine:
             return False, "No Binance API keys configured — add them in Settings"
         if self.running:
             return False, "Already running"
+        self._stop_event.clear()
         self.running = True
         self.stats["started_at"] = datetime.utcnow().isoformat()
         self.thread = threading.Thread(target=self._loop, daemon=True)
@@ -68,6 +73,7 @@ class BotEngine:
         if not self.running:
             return False
         self.running = False
+        self._stop_event.set()          # wake the sleeping thread immediately
         self.stats["started_at"]   = None
         self.stats["next_tick_at"] = None
         self._log("INFO", "Bot stopped by user")
@@ -77,18 +83,18 @@ class BotEngine:
         return {**self.stats, **self.pm.get_stats(), "running": self.running, "halted": self._daily_loss_halt}
 
     def get_log(self, limit: int = 80) -> list:
-        return self.log[:limit]
+        with self._log_lock:
+            return list(self._log_deque)[:limit]
 
     # ── Main loop ──────────────────────────────────────────────────
 
     def _loop(self):
-        rules = load_rules(self.username)   # ensure always defined for sleep calc
         while self.running:
             try:
                 self._reset_daily_halt_if_new_day()
                 if self._daily_loss_halt:
                     self._log("INFO", "Daily loss limit active — halted until UTC midnight")
-                    time.sleep(60)
+                    self._stop_event.wait(timeout=60)
                     continue
 
                 self.stats["last_tick"] = datetime.utcnow().isoformat()
@@ -97,10 +103,15 @@ class BotEngine:
                 pairs    = rules.get("trade_pairs", ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"])
 
                 for symbol in pairs:
+                    if not self.running:
+                        break
                     try:
                         self._process_pair(symbol, rules, interval)
                     except Exception as e:
                         self._log("ERROR", f"{symbol}: {e}")
+
+                if not self.running:
+                    break
 
                 self.pm.increment_candles()
                 self._global_candle_count += 1
@@ -113,9 +124,15 @@ class BotEngine:
             except Exception as e:
                 self._log("ERROR", f"Loop error: {e}")
 
+            if not self.running:
+                break
+
             sleep_s = INTERVAL_SLEEP.get(rules.get("interval", "1h"), 60)
             self.stats["next_tick_at"] = (datetime.utcnow() + timedelta(seconds=sleep_s)).isoformat()
-            time.sleep(sleep_s)
+            self._stop_event.wait(timeout=sleep_s)   # interruptible — wakes instantly on stop()
+            self._stop_event.clear()
+
+        self.stats["next_tick_at"] = None
 
     # ── Per-pair routing ───────────────────────────────────────────
 
@@ -281,11 +298,11 @@ class BotEngine:
     # ── Day-trading entry ──────────────────────────────────────────
 
     def _enter_daytrading(self, symbol: str, signal: dict, rules: dict):
-        entry_price    = signal["close"]
-        trail_pct      = rules.get("dt_trailing_stop_pct", 1.0)
-        tp_pct         = rules.get("dt_take_profit_pct",   3.0)
-        stop_loss      = round(entry_price * (1 - trail_pct / 100), 4)
-        tp_price       = round(entry_price * (1 + tp_pct   / 100), 4)
+        entry_price = signal["close"]
+        trail_pct   = rules.get("dt_trailing_stop_pct", 1.0)
+        tp_pct      = rules.get("dt_take_profit_pct",   3.0)
+        stop_loss   = round(entry_price * (1 - trail_pct / 100), 4)
+        tp_price    = round(entry_price * (1 + tp_pct   / 100), 4)
 
         qty, usdt_size, _ = self.pm.calculate_size(
             entry_price, signal["atr"], rules, stop_override=stop_loss
@@ -349,9 +366,9 @@ class BotEngine:
         if not pos.tp1_hit and close >= pos.tp1_price:
             tp1_qty = round(pos.quantity * (rules.get("tp1_exit_pct", 40.0) / 100.0), 6)
             try:
-                order     = self.client.client.order_market_sell(symbol=symbol, quantity=tp1_qty)
-                fills     = order.get("fills", [])
-                tp1_fill  = float(fills[0]["price"]) if fills else close
+                order    = self.client.client.order_market_sell(symbol=symbol, quantity=tp1_qty)
+                fills    = order.get("fills", [])
+                tp1_fill = float(fills[0]["price"]) if fills else close
             except Exception as e:
                 self._log("ERROR", f"{symbol} TP1 sell failed: {e}")
                 tp1_fill = close
@@ -449,7 +466,6 @@ class BotEngine:
                 f"P&L ${record['pnl_usdt']:+.4f} ({record['pnl_pct']:+.2f}%)"
             )
 
-        # Apply cooldown after close
         rules = rules or {}
         if rules.get("cooldown_enabled", False):
             candles = rules.get("cooldown_candles", 3)
@@ -458,9 +474,9 @@ class BotEngine:
     # ── Kill-switch ────────────────────────────────────────────────
 
     def _check_daily_loss(self, rules: dict):
-        pnl       = self.pm.get_stats()["total_pnl"]
-        loss_pct  = rules.get("daily_loss_limit_pct", MAX_DAILY_LOSS_PCT)
-        limit     = self.pm.starting_capital * (loss_pct / 100)
+        pnl      = self.pm.get_stats()["total_pnl"]
+        loss_pct = rules.get("daily_loss_limit_pct", MAX_DAILY_LOSS_PCT)
+        limit    = self.pm.starting_capital * (loss_pct / 100)
         if pnl < -abs(limit):
             self._daily_loss_halt = True
             self._log("ERROR", f"Daily loss limit hit (${pnl:.2f}). Halted until UTC midnight.")
@@ -477,7 +493,6 @@ class BotEngine:
 
     def _log(self, level: str, message: str):
         entry = {"time": datetime.utcnow().strftime("%H:%M:%S"), "level": level, "message": message}
-        self.log.insert(0, entry)
-        if len(self.log) > 500:
-            self.log = self.log[:500]
+        with self._log_lock:
+            self._log_deque.appendleft(entry)
         print(f"[{entry['time']}] {level}: {message}")

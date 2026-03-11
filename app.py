@@ -1,4 +1,5 @@
 import os
+import time
 from flask import Flask, jsonify, request, render_template, session, redirect
 from flask_cors import CORS
 from datetime import datetime
@@ -50,6 +51,11 @@ _seed_user_from_env()
 _engines: dict[str, BotEngine] = {}
 _clients: dict[str, BinanceClient | None] = {}
 
+# Connection status cache: username -> (timestamp, connected_bool)
+# Avoids a Binance network call on every 5-second status poll.
+_conn_cache: dict[str, tuple[float, bool]] = {}
+_CONN_CACHE_TTL = 30.0   # seconds
+
 
 def _make_client(username: str) -> BinanceClient | None:
     keys = get_api_keys(username)
@@ -82,6 +88,7 @@ def reinit_client(username: str, api_key: str, secret_key: str,
     """Rebuild the Binance client for a user (stops bot first if running)."""
     if anthropic_key:
         os.environ["ANTHROPIC_API_KEY"] = anthropic_key
+    _conn_cache.pop(username, None)   # force fresh connection check after key change
     eng = get_engine(username)
     if eng.running:
         eng.stop()
@@ -209,20 +216,28 @@ def api_status():
             "bot": eng.get_stats(),
             "error": "Binance client unavailable — add API keys in Settings",
         })
-    try:
-        connected   = client.test_connection()
-        server_time = client.get_server_time() if connected else {}
-    except Exception as e:
-        return jsonify({
-            "connected": False, "testnet": client.testnet,
-            "server_time": None, "timestamp": datetime.utcnow().isoformat(),
-            "bot": eng.get_stats(),
-            "error": str(e),
-        })
+    now    = time.monotonic()
+    cached = _conn_cache.get(username)
+    if cached and (now - cached[0]) < _CONN_CACHE_TTL:
+        connected = cached[1]
+        server_time_val = None
+    else:
+        try:
+            connected = client.test_connection()
+            server_time_val = client.get_server_time().get("serverTime") if connected else None
+        except Exception as e:
+            return jsonify({
+                "connected": False, "testnet": client.testnet,
+                "server_time": None, "timestamp": datetime.utcnow().isoformat(),
+                "bot": eng.get_stats(),
+                "error": str(e),
+            })
+        _conn_cache[username] = (now, connected)
+
     return jsonify({
         "connected":   connected,
         "testnet":     client.testnet,
-        "server_time": server_time.get("serverTime"),
+        "server_time": server_time_val,
         "timestamp":   datetime.utcnow().isoformat(),
         "bot":         eng.get_stats(),
     })
