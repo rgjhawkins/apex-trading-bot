@@ -193,30 +193,33 @@
     border: none;
     border-radius: var(--panel-radius);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: box-shadow 0.15s ease, transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
     margin-bottom: 8px;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
   }
   .btn:last-child { margin-bottom: 0; }
+  .btn:active:not(:disabled) { transform: scale(0.97) !important; transition: transform 0.05s ease; }
   .btn-start {
     background: linear-gradient(135deg, #00C07F, #00916E);
     color: #000;
     box-shadow: 0 0 20px rgba(0,192,127,0.2);
   }
-  .btn-start:hover { box-shadow: 0 0 30px rgba(0,192,127,0.4); transform: translateY(-1px); }
-  .btn-start:disabled { background: var(--muted); color: var(--text-dim); box-shadow: none; transform: none; cursor: not-allowed; }
+  .btn-start:hover:not(:disabled) { box-shadow: 0 0 30px rgba(0,192,127,0.4); transform: translateY(-1px); }
+  .btn-start:disabled { background: var(--muted); color: var(--text-dim); box-shadow: none; transform: none; cursor: not-allowed; opacity: 0.6; }
   .btn-stop {
     background: linear-gradient(135deg, #FF3B5C, #C0002F);
     color: #fff;
     box-shadow: 0 0 20px rgba(255,59,92,0.2);
   }
-  .btn-stop:hover { box-shadow: 0 0 30px rgba(255,59,92,0.4); transform: translateY(-1px); }
-  .btn-stop:disabled { background: var(--muted); color: var(--text-dim); box-shadow: none; transform: none; cursor: not-allowed; }
+  .btn-stop:hover:not(:disabled) { box-shadow: 0 0 30px rgba(255,59,92,0.4); transform: translateY(-1px); }
+  .btn-stop:disabled { background: var(--muted); color: var(--text-dim); box-shadow: none; transform: none; cursor: not-allowed; opacity: 0.6; }
   .btn-secondary {
     background: var(--bg3);
     color: var(--text);
     border: 1px solid var(--border2);
   }
-  .btn-secondary:hover { border-color: var(--gold-dim); color: var(--gold); }
+  .btn-secondary:hover:not(:disabled) { border-color: var(--gold-dim); color: var(--gold); }
 
   .bot-stat-row {
     display: flex;
@@ -440,9 +443,11 @@
     color: var(--gold);
     border-radius: var(--panel-radius);
     cursor: pointer;
-    transition: all 0.15s;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.05s;
+    user-select: none;
   }
-  .save-rules-btn:hover { background: rgba(240,185,11,0.2); }
+  .save-rules-btn:hover:not(:disabled) { background: rgba(240,185,11,0.2); }
+  .save-rules-btn:active:not(:disabled) { transform: scale(0.97); }
   .reset-defaults-btn {
     padding: 9px 12px;
     font-family: var(--mono);
@@ -499,7 +504,8 @@
     0%   { background-position: 200% center; }
     100% { background-position: -200% center; }
   }
-  .btn-ai:hover { box-shadow: 0 0 24px rgba(240,185,11,0.5); transform: translateY(-1px); }
+  .btn-ai:hover:not(:disabled) { box-shadow: 0 0 24px rgba(240,185,11,0.5); transform: translateY(-1px); }
+  .btn-ai:active:not(:disabled) { transform: scale(0.97) !important; transition: transform 0.05s ease; }
   .btn-ai:disabled {
     background: var(--muted);
     color: var(--text-dim);
@@ -877,11 +883,14 @@
     letter-spacing: 2px; text-transform: uppercase;
     background: var(--gold-glow); border: 1px solid var(--gold-dim);
     color: var(--gold); border-radius: 3px; cursor: pointer;
-    transition: all 0.15s; margin-top: 6px;
+    transition: background 0.15s, transform 0.05s; margin-top: 6px;
+    user-select: none;
   }
-  .modal-btn:hover { background: rgba(240,185,11,0.2); }
+  .modal-btn:hover:not(:disabled) { background: rgba(240,185,11,0.2); }
+  .modal-btn:active:not(:disabled) { transform: scale(0.98); }
+  .modal-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .modal-btn.danger { background: rgba(255,59,92,0.08); border-color: rgba(255,59,92,0.4); color: var(--red); }
-  .modal-btn.danger:hover { background: rgba(255,59,92,0.15); }
+  .modal-btn.danger:hover:not(:disabled) { background: rgba(255,59,92,0.15); }
 
   /* ── Notification toast ──────────────────────────────── */
   #toast {
@@ -2174,6 +2183,11 @@ async function loadRules() {
 }
 
 async function saveRules() {
+  const btn = document.querySelector('.save-rules-btn');
+  const origText = btn.textContent;
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+
   const g = id => document.getElementById(id);
   const f = id => parseFloat(g(id)?.value) || 0;
   const i = id => parseInt(g(id)?.value)   || 0;
@@ -2231,10 +2245,6 @@ async function saveRules() {
     dt_breakeven_pct:       f('r-dt-breakeven'),
     dt_time_stop_candles:   i('r-dt-time-stop'),
   };
-  const btn = document.querySelector('.save-rules-btn');
-  const origText = btn.textContent;
-  btn.textContent = 'Saving…';
-  btn.disabled = true;
   try {
     const res = await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
     if (!res.ok) { showToast(`Save failed (${res.status})`); return; }
@@ -2295,6 +2305,10 @@ function showSettingsMsg(msg, isErr) {
 }
 
 async function saveKeys() {
+  const btn = document.querySelector('#settings-overlay .modal-btn');
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
   const payload = {
     binance_api_key:    document.getElementById('s-binance-key').value.trim(),
     binance_secret_key: document.getElementById('s-binance-secret').value.trim(),
@@ -2314,6 +2328,7 @@ async function saveKeys() {
       showSettingsMsg('✗ ' + (d.error || 'Save failed'), true);
     }
   } catch(e) { showSettingsMsg('✗ Request failed', true); }
+  finally { btn.disabled = false; btn.textContent = orig; }
 }
 
 async function changePassword() {
@@ -2322,6 +2337,11 @@ async function changePassword() {
   const confirm = document.getElementById('s-pw-confirm').value;
   if (newPw !== confirm) { showSettingsMsg('✗ New passwords do not match', true); return; }
   if (newPw.length < 8)  { showSettingsMsg('✗ Password must be at least 8 characters', true); return; }
+  const btns = document.querySelectorAll('#settings-overlay .modal-btn');
+  const btn  = btns[btns.length - 1];
+  const orig = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Updating…';
   try {
     const r = await fetch('/api/password', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({current_password: current, new_password: newPw}) });
     const d = await r.json();
@@ -2332,6 +2352,7 @@ async function changePassword() {
       showSettingsMsg('✗ ' + (d.error || 'Failed'), true);
     }
   } catch(e) { showSettingsMsg('✗ Request failed', true); }
+  finally { btn.disabled = false; btn.textContent = orig; }
 }
 
 // ── AI Decide ──────────────────────────────────────────────────────
@@ -2462,26 +2483,41 @@ async function resetDefaults() {
 
 // ── Bot Control ────────────────────────────────────────────────────
 async function botStart() {
+  const btn = document.getElementById('btn-start');
+  btn.disabled = true;
+  btn.textContent = '▶ Starting…';
   try {
     const res  = await fetch('/api/bot/start', { method: 'POST' });
     const data = await res.json();
     if (data.started) {
-      applyBotRunning(true);   // instant UI update — no poll round-trip needed
+      applyBotRunning(true);
       showToast('Bot started');
     } else {
+      btn.disabled = false;
+      btn.textContent = '▶ Start Bot';
       showToast(data.reason || 'Could not start bot');
     }
     pollLog();
-  } catch(e) { showToast('Start request failed'); }
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '▶ Start Bot';
+    showToast('Start request failed');
+  }
 }
 
 async function botStop() {
+  const btn = document.getElementById('btn-stop');
+  btn.disabled = true;
+  btn.textContent = '■ Stopping…';
   try {
     await fetch('/api/bot/stop', { method: 'POST' });
-    applyBotRunning(false);    // instant UI update
+    applyBotRunning(false);
     showToast('Bot stopped');
     pollLog();
-  } catch(e) {}
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = '■ Stop Bot';
+  }
 }
 
 // ── Restructure slider ctrl-rows → 2-line layout ───────────────────
@@ -2521,12 +2557,34 @@ async function init() {
 }
 
 init();
-setInterval(pollStatus,    5000);
-setInterval(pollPositions, 10000);
-setInterval(pollTickers,   8000);
-setInterval(pollPortfolio, 60000);
-setInterval(pollOrders,    30000);
-setInterval(pollLog,       5000);
+
+// ── Polling — pause when tab hidden, resume on visibility ──────────
+let _polls = [];
+function startPolling() {
+  if (_polls.length) return;
+  _polls = [
+    setInterval(pollStatus,    5000),
+    setInterval(pollPositions, 10000),
+    setInterval(pollTickers,   8000),
+    setInterval(pollPortfolio, 60000),
+    setInterval(pollOrders,    30000),
+    setInterval(pollLog,       5000),
+  ];
+}
+function stopPolling() {
+  _polls.forEach(clearInterval);
+  _polls = [];
+}
+startPolling();
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    stopPolling();
+  } else {
+    // Refresh immediately on return, then restart intervals
+    Promise.all([pollStatus(), pollLog(), pollPositions()]);
+    startPolling();
+  }
+});
 </script>
 </body>
 </html>
