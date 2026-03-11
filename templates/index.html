@@ -2070,18 +2070,27 @@ function renderOpenOrders() {
 }
 
 // ── Bot Log Poll ───────────────────────────────────────────────────
+function renderLogEntry(e) {
+  return `<div class="log-entry ${e.level}">
+    <span class="log-time">${e.time}</span>
+    <span class="log-level ${e.level}">${e.level}</span>
+    <span class="log-msg">${e.message}</span>
+  </div>`;
+}
+
+function prependLogEntries(entries) {
+  const stream = document.getElementById('log-stream');
+  const html   = entries.map(renderLogEntry).join('');
+  stream.insertAdjacentHTML('afterbegin', html);
+  // Trim to 80 visible entries
+  while (stream.children.length > 80) stream.removeChild(stream.lastChild);
+}
+
 async function pollLog() {
   try {
-    const r = await fetch('/api/log?limit=80');
+    const r       = await fetch('/api/log?limit=80');
     const entries = await r.json();
-    const stream = document.getElementById('log-stream');
-    stream.innerHTML = entries.map(e => `
-      <div class="log-entry ${e.level}">
-        <span class="log-time">${e.time}</span>
-        <span class="log-level ${e.level}">${e.level}</span>
-        <span class="log-msg">${e.message}</span>
-      </div>
-    `).join('');
+    document.getElementById('log-stream').innerHTML = entries.map(renderLogEntry).join('');
   } catch(e) {}
 }
 
@@ -2222,16 +2231,40 @@ async function saveRules() {
     dt_breakeven_pct:       f('r-dt-breakeven'),
     dt_time_stop_candles:   i('r-dt-time-stop'),
   };
+  const btn = document.querySelector('.save-rules-btn');
+  const origText = btn.textContent;
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
   try {
     const res = await fetch('/api/rules', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(rules) });
     if (!res.ok) { showToast(`Save failed (${res.status})`); return; }
     const data = await res.json();
-    const n = data.changes?.length ?? 0;
-    showToast(n > 0 ? `Saved — ${n} change${n > 1 ? 's' : ''} logged` : 'Saved — no changes');
-    pollLog();
+    const n    = data.changes?.length ?? 0;
+
+    // Inject log entries instantly from the response — no poll round-trip needed
+    if (data.log_entries?.length) {
+      prependLogEntries(data.log_entries);
+    }
+
+    btn.textContent = '✓ Saved';
+    btn.style.background = 'rgba(0,192,127,0.15)';
+    btn.style.borderColor = 'var(--green)';
+    btn.style.color = 'var(--green)';
+    showToast(n > 0 ? `${n} change${n > 1 ? 's' : ''} saved` : 'Settings saved');
+    setTimeout(() => {
+      btn.textContent = origText;
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      btn.style.color = '';
+      btn.disabled = false;
+    }, 2000);
     pollTickers();
     pollOrders();
-  } catch(e) { showToast('Save failed — check connection'); }
+  } catch(e) {
+    showToast('Save failed — check connection');
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
 }
 
 // ── Settings modal ─────────────────────────────────────────────────

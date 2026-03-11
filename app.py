@@ -402,7 +402,10 @@ def set_rules():
     else:
         eng._log("INFO", "Rules saved (no changes)")
 
-    return jsonify({"rules": saved, "changes": changes})
+    # Return the freshly-written log entries so the frontend can inject them
+    # immediately without a separate /api/log poll round-trip.
+    log_entries = eng.get_log(len(changes) + 2)
+    return jsonify({"rules": saved, "changes": changes, "log_entries": log_entries})
 
 
 @app.route("/api/bot/start", methods=["POST"])
