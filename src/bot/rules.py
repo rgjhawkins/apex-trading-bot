@@ -70,6 +70,12 @@ DEFAULT_RULES = {
     # ── Risk controls ─────────────────────────────────────────────
     "daily_loss_limit_pct":     3.0,       # halt all trading if day loss exceeds 3%
 
+    # ── Volume screener ────────────────────────────────────────────
+    "screener_enabled":      False,    # auto-select pairs by volume instead of manual list
+    "screener_top_n":        30,       # trade top N pairs by 24h USDT volume
+    "screener_min_vol_usdt": 50000000, # skip pairs below $50M 24h volume
+    "screener_exclude":      [],       # pairs to always skip even if in top N
+
     # ── Day trading strategy parameters ───────────────────────────
     "dt_price_rise_pct":        1.5,       # price must rise X% over lookback candles
     "dt_lookback_candles":      5,         # how many candles back to measure the rise

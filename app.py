@@ -363,6 +363,9 @@ _RULE_LABELS = {
     "trade_pairs":            "Trade pairs",
     "interval":               "Interval",
     "strategy":               "Strategy",
+    "screener_enabled":       "Volume screener",
+    "screener_top_n":         "Screener top N",
+    "screener_min_vol_usdt":  "Screener min volume",
     "dt_price_rise_pct":      "DT price rise %",
     "dt_lookback_candles":    "DT lookback candles",
     "dt_volume_mult":         "DT volume mult",
@@ -446,6 +449,27 @@ def api_positions():
 def api_bot_stats():
     username = session.get("username", "")
     return jsonify(get_engine(username).get_stats())
+
+
+@app.route("/api/screener")
+def api_screener():
+    """Return current screener top-N list (live fetch, not cached)."""
+    username = session.get("username", "")
+    client   = _clients.get(username)
+    if client is None:
+        return jsonify({"error": "Exchange not connected"}), 400
+    rules = load_rules(username)
+    try:
+        from src.bot.screener import get_top_pairs
+        pairs, info = get_top_pairs(
+            client.client,
+            top_n      = int(rules.get("screener_top_n",       30)),
+            min_volume = float(rules.get("screener_min_vol_usdt", 0)),
+            exclude    = rules.get("screener_exclude", []),
+        )
+        return jsonify({"pairs": pairs, "info": info})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/ai-decide", methods=["POST"])

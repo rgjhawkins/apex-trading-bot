@@ -12,6 +12,7 @@ from datetime import datetime, timedelta, timezone
 from src.bot.indicators import klines_to_df, compute_indicators, get_signal, get_daytrading_signal
 from src.bot.position_manager import PositionManager, MIN_NOTIONAL
 from src.bot.rules import load_rules
+from src.bot.screener import get_top_pairs
 
 KLINE_LIMIT        = 250
 MAX_DAILY_LOSS_PCT = 3.0
@@ -44,11 +45,12 @@ class BotEngine:
         self._daily_loss_reset_date: str = ""
 
         self.stats = {
-            "trades_today": 0,
-            "pnl_today":    0.0,
-            "started_at":   None,
-            "last_tick":    None,
-            "next_tick_at": None,
+            "trades_today":   0,
+            "pnl_today":      0.0,
+            "started_at":     None,
+            "last_tick":      None,
+            "next_tick_at":   None,
+            "screener_pairs": None,
         }
 
     # ── Public controls ────────────────────────────────────────────
@@ -101,7 +103,20 @@ class BotEngine:
                 self.stats["last_tick"] = datetime.utcnow().isoformat()
                 rules    = load_rules(self.username)
                 interval = rules.get("interval", "1h")
-                pairs    = rules.get("trade_pairs", ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"])
+
+                if rules.get("screener_enabled", False):
+                    pairs, screener_info = get_top_pairs(
+                        self.client.client,
+                        top_n      = int(rules.get("screener_top_n",       30)),
+                        min_volume = float(rules.get("screener_min_vol_usdt", 0)),
+                        exclude    = rules.get("screener_exclude", []),
+                    )
+                    self.stats["screener_pairs"] = pairs
+                    if self._global_candle_count % 5 == 0:   # log every 5 ticks
+                        self._log("INFO", f"Screener: top {len(pairs)} pairs — {', '.join(pairs[:5])}{'…' if len(pairs) > 5 else ''}")
+                else:
+                    pairs = rules.get("trade_pairs", ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT"])
+                    self.stats["screener_pairs"] = None
 
                 for symbol in pairs:
                     if not self.running:
