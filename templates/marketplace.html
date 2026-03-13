@@ -136,8 +136,10 @@ body::before {
 /* ── Section Header ──────────────────────────────────────── */
 .section-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
 }
 .section-title {
@@ -278,8 +280,9 @@ body::before {
   padding: 10px 16px;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
+  row-gap: 6px;
 }
 .card-date {
   font-size: 9px;
@@ -772,20 +775,34 @@ function buildMyCard(s) {
   const pubTag  = pub  ? `<span class="tag tag-published">LISTED</span>` : '';
   const purchTag = purch ? `<span class="tag tag-purchased">ACQUIRED</span>` : '';
 
-  const footerBtns = purch ? `
-    <button class="btn btn-ghost btn-sm" onclick="openLoadModal('${s.id}')">Load Rules</button>
-    <button class="btn btn-ghost btn-sm" onclick="openBtModal('${s.id}')">↻ Backtest</button>
-    <span class="card-date">${created}</span>
-  ` : `
-    <button class="btn btn-ghost btn-sm" onclick="openBtModal('${s.id}')">
-      ${hasbt ? '↻ Re-run' : '▶ Backtest'}
-    </button>
-    <button class="btn btn-ghost btn-sm" onclick="openLoadModal('${s.id}')">Load Rules</button>
-    ${!pub && hasbt ? `<button class="btn btn-gold btn-sm" onclick="openPublishModal('${s.id}')">Publish</button>` : ''}
-    ${pub ? `<button class="btn btn-ghost btn-sm" onclick="unpublish('${s.id}')">Unpublish</button>` : ''}
-    <button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')">Delete</button>
-    <span class="card-date">${created}</span>
-  `;
+  let footerBtns;
+  if (purch) {
+    footerBtns = `
+      <button class="btn btn-ghost btn-sm" onclick="openLoadModal('${s.id}')">Load Rules</button>
+      <button class="btn btn-ghost btn-sm" onclick="openBtModal('${s.id}')">↻ Backtest</button>
+      <span class="card-date">${created}</span>`;
+  } else if (pub) {
+    footerBtns = `
+      <button class="btn btn-ghost btn-sm" onclick="openBtModal('${s.id}')">↻ Re-run Backtest</button>
+      <button class="btn btn-ghost btn-sm" onclick="openLoadModal('${s.id}')">Load Rules</button>
+      <button class="btn btn-ghost btn-sm" onclick="unpublish('${s.id}')">Unpublish</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')">Delete</button>
+      <span class="card-date">${created}</span>`;
+  } else if (hasbt) {
+    footerBtns = `
+      <button class="btn btn-gold btn-sm" onclick="openPublishModal('${s.id}')">🚀 Publish to Marketplace</button>
+      <button class="btn btn-ghost btn-sm" onclick="openBtModal('${s.id}')">↻ Re-run Backtest</button>
+      <button class="btn btn-ghost btn-sm" onclick="openLoadModal('${s.id}')">Load Rules</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')">Delete</button>
+      <span class="card-date">${created}</span>`;
+  } else {
+    footerBtns = `
+      <button class="btn btn-ghost btn-sm" onclick="openBtModal('${s.id}')">▶ Run Backtest</button>
+      <span style="font-size:9px;color:var(--text-dim);align-self:center;">← backtest required to publish</span>
+      <button class="btn btn-ghost btn-sm" onclick="openLoadModal('${s.id}')">Load Rules</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')">Delete</button>
+      <span class="card-date">${created}</span>`;
+  }
 
   return `
   <div class="strategy-card ${hasbt ? 'has-backtest' : ''} ${pub ? 'published' : ''}" id="card-${s.id}">
