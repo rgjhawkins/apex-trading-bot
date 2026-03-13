@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from flask import Flask, jsonify, request, render_template, session, redirect
@@ -62,6 +63,59 @@ _clients: dict[str, BinanceClient | None] = {}
 # Avoids a Binance network call on every 5-second status poll.
 _conn_cache: dict[str, tuple[float, bool]] = {}
 _CONN_CACHE_TTL = 30.0   # seconds
+
+
+# ── Bot runtime tracking ──────────────────────────────────────────
+# Accumulated runtime is persisted so it survives restarts.
+# Minimum runtime required before a strategy can be saved:
+#   momentum   → 1 week  (604 800 s)
+#   daytrading → 24 h    ( 86 400 s)
+
+_DATA_DIR_RT    = "/data" if os.path.isdir("/data") else os.path.abspath(".")
+_RUNTIME_FILE   = os.path.join(_DATA_DIR_RT, "bot_runtime.json")
+_RUNTIME_MINS   = {"momentum": 7 * 24 * 3600, "daytrading": 24 * 3600}
+
+
+def _load_runtime_store() -> dict:
+    if os.path.exists(_RUNTIME_FILE):
+        try:
+            with open(_RUNTIME_FILE) as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+
+def _save_runtime_store(data: dict):
+    with open(_RUNTIME_FILE, "w") as f:
+        json.dump(data, f)
+
+
+_bot_runtime: dict[str, float] = _load_runtime_store()   # username -> total seconds
+
+
+def _accumulate_runtime(username: str, started_at_iso: str):
+    """Add completed session duration to the persistent runtime store."""
+    try:
+        start    = datetime.fromisoformat(started_at_iso)
+        duration = (datetime.utcnow() - start).total_seconds()
+        _bot_runtime[username] = _bot_runtime.get(username, 0.0) + max(0.0, duration)
+        _save_runtime_store(_bot_runtime)
+    except Exception:
+        pass
+
+
+def _get_total_runtime(username: str, eng) -> float:
+    """Accumulated runtime + current running session (if active)."""
+    total      = _bot_runtime.get(username, 0.0)
+    started_at = eng.stats.get("started_at")
+    if started_at:
+        try:
+            start  = datetime.fromisoformat(started_at)
+            total += (datetime.utcnow() - start).total_seconds()
+        except Exception:
+            pass
+    return total
 
 
 def _make_client(username: str) -> BinanceClient | None:
@@ -241,12 +295,23 @@ def api_status():
             })
         _conn_cache[username] = (now, connected)
 
+    rules    = load_rules(username)
+    strategy = rules.get("strategy", "momentum")
+    min_secs = _RUNTIME_MINS.get(strategy, _RUNTIME_MINS["daytrading"])
+    runtime  = _get_total_runtime(username, eng)
+
     return jsonify({
         "connected":   connected,
         "testnet":     client.testnet,
         "server_time": server_time_val,
         "timestamp":   datetime.utcnow().isoformat(),
         "bot":         eng.get_stats(),
+        "runtime": {
+            "total_s":    runtime,
+            "required_s": min_secs,
+            "strategy":   strategy,
+            "can_save":   runtime >= min_secs,
+        },
     })
 
 
@@ -428,9 +493,12 @@ def bot_start():
 
 @app.route("/api/bot/stop", methods=["POST"])
 def bot_stop():
-    username = session.get("username", "")
-    eng = get_engine(username)
-    ok  = eng.stop()
+    username   = session.get("username", "")
+    eng        = get_engine(username)
+    started_at = eng.stats.get("started_at")   # capture before stop() clears it
+    ok         = eng.stop()
+    if ok and started_at:
+        _accumulate_runtime(username, started_at)
     return jsonify({"stopped": ok, "running": eng.running})
 
 
@@ -580,9 +648,31 @@ def api_save_strategy():
     desc     = (data.get("description") or "").strip()
     if not name:
         return jsonify({"error": "Name is required"}), 400
-    rules    = load_rules(username)
-    strategy = save_strategy(username, name, desc, rules)
-    return jsonify(strategy)
+
+    rules       = load_rules(username)
+    strategy    = rules.get("strategy", "momentum")
+    min_secs    = _RUNTIME_MINS.get(strategy, _RUNTIME_MINS["daytrading"])
+    eng         = get_engine(username)
+    runtime_s   = _get_total_runtime(username, eng)
+
+    if runtime_s < min_secs:
+        remaining_s = min_secs - runtime_s
+        if strategy == "daytrading":
+            remaining_label = f"{remaining_s / 3600:.1f}h more"
+            required_label  = "24 hours"
+        else:
+            remaining_label = f"{remaining_s / 86400:.1f} more days"
+            required_label  = "1 week"
+        return jsonify({
+            "error":         f"Run the bot for at least {required_label} before saving a {strategy} strategy. "
+                             f"You need {remaining_label}.",
+            "runtime_s":     runtime_s,
+            "required_s":    min_secs,
+            "remaining_s":   remaining_s,
+        }), 400
+
+    saved = save_strategy(username, name, desc, rules)
+    return jsonify(saved)
 
 
 @app.route("/api/strategies/<strategy_id>", methods=["DELETE"])

@@ -587,6 +587,19 @@ body::before {
       <button class="modal-close" onclick="closeSaveModal()">×</button>
     </div>
     <div class="modal-body">
+
+      <!-- Runtime requirement notice -->
+      <div id="runtimeNotice" style="margin-bottom:16px;padding:12px;border-radius:4px;border:1px solid var(--border2);background:var(--bg2);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <span style="font-size:10px;color:var(--text-dim);letter-spacing:0.06em;">BOT RUNTIME REQUIREMENT</span>
+          <span id="runtimeLabel" style="font-size:10px;color:var(--text-dim);">Loading…</span>
+        </div>
+        <div style="height:4px;border-radius:2px;background:var(--bg3);overflow:hidden;">
+          <div id="runtimeBar" style="height:100%;border-radius:2px;background:var(--gold);width:0%;transition:width 0.4s ease;"></div>
+        </div>
+        <div id="runtimeSub" style="font-size:9px;color:var(--text-dim);margin-top:5px;"></div>
+      </div>
+
       <div class="form-group">
         <label>STRATEGY NAME</label>
         <input type="text" id="stratName" placeholder="e.g. BTC Momentum 1H">
@@ -944,15 +957,57 @@ function buildEquitySVG(curve) {
 }
 
 // ── Save Strategy ────────────────────────────────────────────────────
-function openSaveModal() {
+async function openSaveModal() {
   document.getElementById('stratName').value = '';
   document.getElementById('stratDesc').value = '';
   document.getElementById('saveModal').classList.remove('hidden');
   setTimeout(() => document.getElementById('stratName').focus(), 50);
+  await refreshRuntimeDisplay();
 }
+
+async function refreshRuntimeDisplay() {
+  const label   = document.getElementById('runtimeLabel');
+  const bar     = document.getElementById('runtimeBar');
+  const sub     = document.getElementById('runtimeSub');
+  const saveBtn = document.getElementById('confirmSaveBtn');
+  try {
+    const r  = await fetch('/api/status');
+    const d  = await r.json();
+    const rt = d.runtime;
+    if (!rt) return;
+
+    const pct      = Math.min(100, (rt.total_s / rt.required_s) * 100);
+    const canSave  = rt.can_save;
+    const strategy = rt.strategy === 'daytrading' ? 'Day Trading' : 'Momentum';
+    const required = rt.strategy === 'daytrading' ? '24 hours' : '1 week';
+    const totalHrs = (rt.total_s / 3600).toFixed(1);
+    const reqHrs   = (rt.required_s / 3600).toFixed(0);
+
+    label.textContent = `${totalHrs}h / ${reqHrs}h`;
+    label.style.color = canSave ? 'var(--green)' : 'var(--text-dim)';
+    bar.style.width      = pct.toFixed(1) + '%';
+    bar.style.background = canSave ? 'var(--green)' : 'var(--gold)';
+
+    if (canSave) {
+      sub.innerHTML    = `<span style="color:var(--green)">✓ Requirement met — you can save this ${strategy} strategy</span>`;
+      saveBtn.disabled = false;
+    } else {
+      const remaining = rt.required_s - rt.total_s;
+      const remLabel  = rt.strategy === 'daytrading'
+        ? `${(remaining / 3600).toFixed(1)}h remaining`
+        : `${(remaining / 86400).toFixed(1)} days remaining`;
+      sub.textContent  = `${strategy} strategies require ${required} of bot runtime. ${remLabel}.`;
+      saveBtn.disabled = true;
+    }
+  } catch {
+    sub.textContent = 'Could not load runtime data';
+  }
+}
+
 function closeSaveModal() {
   document.getElementById('saveModal').classList.add('hidden');
 }
+
 async function confirmSave() {
   const name = document.getElementById('stratName').value.trim();
   const desc = document.getElementById('stratDesc').value.trim();
@@ -967,7 +1022,11 @@ async function confirmSave() {
       body: JSON.stringify({name, description: desc}),
     });
     const d = await r.json();
-    if (d.error) { showToast(d.error, 'err'); return; }
+    if (d.error) {
+      showToast(d.error, 'err');
+      await refreshRuntimeDisplay();
+      return;
+    }
     closeSaveModal();
     showToast('Strategy saved', 'ok');
     await loadMyStrategies();
