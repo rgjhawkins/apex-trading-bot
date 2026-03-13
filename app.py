@@ -12,6 +12,13 @@ from src.auth.manager import (
     is_username_taken, register_user, verify_credentials,
     change_password, get_api_keys, save_api_keys, mask,
 )
+from src.marketplace.store import (
+    get_my_strategies, save_strategy, delete_strategy,
+    update_strategy_backtest, publish_strategy, unpublish_strategy,
+    get_marketplace_listings, purchase_strategy, get_strategy_rules,
+    get_credits,
+)
+from src.marketplace.backtest import run_backtest
 
 app = Flask(__name__)
 CORS(app)
@@ -544,6 +551,157 @@ def api_change_password():
         return jsonify({"error": "New password must be at least 8 characters"}), 400
     change_password(username, new_pw)
     return jsonify({"ok": True})
+
+
+# ── Marketplace routes ────────────────────────────────────────────
+
+@app.route("/marketplace")
+def marketplace_page():
+    return render_template("marketplace.html", username=session.get("username", ""))
+
+
+@app.route("/api/credits")
+def api_credits():
+    username = session.get("username", "")
+    return jsonify({"credits": get_credits(username)})
+
+
+@app.route("/api/strategies/mine")
+def api_my_strategies():
+    username = session.get("username", "")
+    return jsonify(get_my_strategies(username))
+
+
+@app.route("/api/strategies/save", methods=["POST"])
+def api_save_strategy():
+    username = session.get("username", "")
+    data     = request.json or {}
+    name     = (data.get("name") or "").strip()
+    desc     = (data.get("description") or "").strip()
+    if not name:
+        return jsonify({"error": "Name is required"}), 400
+    rules    = load_rules(username)
+    strategy = save_strategy(username, name, desc, rules)
+    return jsonify(strategy)
+
+
+@app.route("/api/strategies/<strategy_id>", methods=["DELETE"])
+def api_delete_strategy(strategy_id):
+    username = session.get("username", "")
+    ok       = delete_strategy(username, strategy_id)
+    return jsonify({"ok": ok})
+
+
+@app.route("/api/strategies/<strategy_id>/load", methods=["POST"])
+def api_load_strategy(strategy_id):
+    """Apply a saved strategy's rules as the user's current rules."""
+    username = session.get("username", "")
+    rules    = get_strategy_rules(username, strategy_id)
+    if rules is None:
+        return jsonify({"error": "Strategy not found or not owned"}), 404
+    saved = save_rules(username, rules)
+    get_engine(username)._log("INFO", f"Strategy loaded from library")
+    return jsonify({"rules": saved})
+
+
+@app.route("/api/backtest", methods=["POST"])
+def api_backtest():
+    """Run a backtest against historical klines for the current (or supplied) rules."""
+    username = session.get("username", "")
+    client   = _clients.get(username)
+    if client is None:
+        return jsonify({"error": "Exchange not connected"}), 400
+
+    data     = request.json or {}
+    pair     = (data.get("pair") or "BTCUSDT").upper()
+    interval = data.get("interval") or load_rules(username).get("interval", "1h")
+    rules    = data.get("rules") or load_rules(username)
+    limit    = min(int(data.get("limit", 1000)), 1000)
+
+    try:
+        klines = client.client.get_klines(symbol=pair, interval=interval, limit=limit)
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch klines: {e}"}), 500
+
+    result = run_backtest(klines, rules, pair=pair)
+    if "error" in result:
+        return jsonify(result), 400
+    return jsonify(result)
+
+
+@app.route("/api/strategies/<strategy_id>/backtest", methods=["POST"])
+def api_backtest_strategy(strategy_id):
+    """Run a backtest and attach the result to a saved strategy."""
+    username = session.get("username", "")
+    client   = _clients.get(username)
+    if client is None:
+        return jsonify({"error": "Exchange not connected"}), 400
+
+    rules = get_strategy_rules(username, strategy_id)
+    if rules is None:
+        return jsonify({"error": "Strategy not found"}), 404
+
+    data     = request.json or {}
+    pair     = (data.get("pair") or rules.get("trade_pairs", ["BTCUSDT"])[0]).upper()
+    interval = data.get("interval") or rules.get("interval", "1h")
+    limit    = min(int(data.get("limit", 1000)), 1000)
+
+    try:
+        klines = client.client.get_klines(symbol=pair, interval=interval, limit=limit)
+    except Exception as e:
+        return jsonify({"error": f"Failed to fetch klines: {e}"}), 500
+
+    result = run_backtest(klines, rules, pair=pair)
+    if "error" in result:
+        return jsonify(result), 400
+
+    updated = update_strategy_backtest(username, strategy_id, result)
+    return jsonify({"backtest": result, "strategy": updated})
+
+
+@app.route("/api/strategies/<strategy_id>/publish", methods=["POST"])
+def api_publish_strategy(strategy_id):
+    username      = session.get("username", "")
+    data          = request.json or {}
+    price_credits = int(data.get("price_credits", 0))
+    listing, err  = publish_strategy(username, strategy_id, price_credits)
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify(listing)
+
+
+@app.route("/api/strategies/<strategy_id>/unpublish", methods=["POST"])
+def api_unpublish_strategy(strategy_id):
+    username = session.get("username", "")
+    ok       = unpublish_strategy(username, strategy_id)
+    return jsonify({"ok": ok})
+
+
+@app.route("/api/marketplace")
+def api_marketplace():
+    username = session.get("username", "")
+    listings = get_marketplace_listings()
+    credits  = get_credits(username)
+
+    # Mark which ones the user already owns
+    owned_ids = {
+        s.get("source_id", s["id"])
+        for s in get_my_strategies(username)
+    }
+    for l in listings:
+        l["owned"]       = (l["id"] in owned_ids or l["author"] == username)
+        l["is_mine"]     = l["author"] == username
+
+    return jsonify({"listings": listings, "credits": credits})
+
+
+@app.route("/api/marketplace/<strategy_id>/purchase", methods=["POST"])
+def api_purchase_strategy(strategy_id):
+    username = session.get("username", "")
+    copy, err = purchase_strategy(username, strategy_id)
+    if err:
+        return jsonify({"error": err}), 400
+    return jsonify({"strategy": copy, "credits": get_credits(username)})
 
 
 if __name__ == "__main__":

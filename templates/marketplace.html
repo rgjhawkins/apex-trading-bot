@@ -1,0 +1,1188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APEX — Strategy Marketplace</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@300;400;600;700&family=IBM+Plex+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:          #07080D;
+  --bg1:         #0D0F18;
+  --bg2:         #111422;
+  --bg3:         #181C30;
+  --border:      #1E2340;
+  --border2:     #2A2F50;
+  --gold:        #F0B90B;
+  --gold-dim:    #8B6A00;
+  --gold-glow:   rgba(240,185,11,0.12);
+  --green:       #00C07F;
+  --green-dim:   rgba(0,192,127,0.12);
+  --red:         #FF3B5C;
+  --red-dim:     rgba(255,59,92,0.12);
+  --blue:        #4B8BF5;
+  --muted:       #3A4060;
+  --text:        #C8CFEE;
+  --text-dim:    #5A6090;
+  --text-bright: #EEF0FF;
+  --mono:    'IBM Plex Mono', monospace;
+  --display: 'Chakra Petch', sans-serif;
+  --r: 4px;
+}
+
+html, body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(240,185,11,0.015) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240,185,11,0.015) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+#app { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ── Top Nav ─────────────────────────────────────────────── */
+.topnav {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px;
+  height: 48px;
+  background: var(--bg1);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.topnav-logo {
+  font-family: var(--display);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 0.1em;
+}
+.topnav-sep { color: var(--muted); }
+.topnav-title { color: var(--text-dim); font-size: 11px; letter-spacing: 0.08em; }
+.topnav-back {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  text-decoration: none;
+  font-size: 11px;
+  padding: 4px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  transition: color 0.15s, border-color 0.15s;
+}
+.topnav-back:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+.credits-badge {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--gold);
+  background: var(--gold-glow);
+  border: 1px solid var(--gold-dim);
+  border-radius: var(--r);
+  padding: 3px 10px;
+}
+.credits-badge span { color: var(--text-bright); font-weight: 500; }
+
+/* ── Page Container ─────────────────────────────────────── */
+.page { max-width: 1200px; margin: 0 auto; padding: 24px 20px; flex: 1; }
+
+/* ── Tabs ───────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 24px;
+}
+.tab-btn {
+  padding: 10px 20px;
+  font-family: var(--display);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Section Header ──────────────────────────────────────── */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+  letter-spacing: 0.08em;
+}
+.section-sub { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 14px;
+  border-radius: var(--r);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, transform 0.05s;
+  white-space: nowrap;
+  user-select: none;
+}
+.btn:active:not(:disabled) { transform: scale(0.97); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-gold  { background: var(--gold); color: #000; font-weight: 600; }
+.btn-gold:hover:not(:disabled)  { opacity: 0.88; }
+.btn-ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--border2); }
+.btn-ghost:hover:not(:disabled) { color: var(--text); border-color: var(--text-dim); }
+.btn-danger { background: transparent; color: var(--red); border: 1px solid rgba(255,59,92,0.3); }
+.btn-danger:hover:not(:disabled) { background: var(--red-dim); }
+.btn-green { background: var(--green); color: #000; font-weight: 600; }
+.btn-green:hover:not(:disabled) { opacity: 0.88; }
+.btn-sm { padding: 4px 10px; font-size: 10px; }
+
+/* ── Strategy Cards ─────────────────────────────────────── */
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 14px;
+}
+
+.strategy-card {
+  background: var(--bg1);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+.strategy-card:hover { border-color: var(--border2); }
+.strategy-card.has-backtest { border-left: 3px solid var(--green); }
+.strategy-card.published { border-left: 3px solid var(--gold); }
+
+.card-header {
+  padding: 14px 16px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r);
+  background: var(--bg3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.card-title-group { flex: 1; min-width: 0; }
+.card-name {
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-bright);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.card-meta {
+  display: flex;
+  gap: 8px;
+  margin-top: 3px;
+  flex-wrap: wrap;
+}
+.tag {
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+.tag-strategy { background: rgba(75,139,245,0.15); color: var(--blue); }
+.tag-pair     { background: var(--bg3); color: var(--text-dim); }
+.tag-interval { background: var(--bg3); color: var(--text-dim); }
+.tag-published { background: var(--gold-glow); color: var(--gold); border: 1px solid var(--gold-dim); }
+.tag-purchased { background: rgba(0,192,127,0.1); color: var(--green); border: 1px solid rgba(0,192,127,0.3); }
+
+.card-desc {
+  padding: 0 16px 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+/* ── Backtest Stats Strip ───────────────────────────────── */
+.bt-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.bt-stat {
+  padding: 8px 10px;
+  text-align: center;
+  border-right: 1px solid var(--border);
+}
+.bt-stat:last-child { border-right: none; }
+.bt-stat-label { font-size: 9px; color: var(--text-dim); letter-spacing: 0.06em; margin-bottom: 3px; }
+.bt-stat-val {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-bright);
+}
+.bt-stat-val.pos { color: var(--green); }
+.bt-stat-val.neg { color: var(--red); }
+
+/* ── Equity Mini Chart ─────────────────────────────────── */
+.equity-chart { padding: 8px 16px 4px; }
+.equity-chart svg { width: 100%; height: 36px; display: block; }
+
+/* ── Card Footer ────────────────────────────────────────── */
+.card-footer {
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.card-date {
+  font-size: 9px;
+  color: var(--text-dim);
+  margin-left: auto;
+}
+
+/* ── Backtest Expandable Panel ─────────────────────────── */
+.bt-panel {
+  border-top: 1px solid var(--border);
+  background: var(--bg2);
+}
+.bt-panel-inner { padding: 14px 16px; }
+.bt-panel-title {
+  font-family: var(--display);
+  font-size: 11px;
+  color: var(--text-dim);
+  letter-spacing: 0.08em;
+  margin-bottom: 12px;
+}
+
+.bt-config {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+.bt-config label { font-size: 10px; color: var(--text-dim); }
+.bt-config select, .bt-config input {
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 4px 8px;
+  outline: none;
+}
+
+/* ── Trades Table ─────────────────────────────────────── */
+.trades-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 10px;
+  margin-top: 8px;
+}
+.trades-table th {
+  text-align: left;
+  padding: 4px 6px;
+  color: var(--text-dim);
+  font-weight: 400;
+  border-bottom: 1px solid var(--border);
+  letter-spacing: 0.05em;
+}
+.trades-table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+}
+.trades-table tr:last-child td { border-bottom: none; }
+.win  { color: var(--green); }
+.loss { color: var(--red); }
+
+/* ── Marketplace Filters ────────────────────────────────── */
+.mkt-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.mkt-toolbar select, .mkt-toolbar input {
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 5px 10px;
+  outline: none;
+}
+.mkt-toolbar select:focus, .mkt-toolbar input:focus { border-color: var(--gold); }
+
+.mkt-count { font-size: 10px; color: var(--text-dim); margin-left: auto; }
+
+/* ── Price badge ────────────────────────────────────────── */
+.price-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 2px;
+  font-size: 10px;
+  font-weight: 600;
+}
+.price-badge.free { background: var(--green-dim); color: var(--green); }
+.price-badge.paid { background: var(--gold-glow); color: var(--gold); }
+
+/* ── Modal ──────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+}
+.modal-overlay.hidden { display: none; }
+.modal {
+  background: var(--bg1);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  width: 460px;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+.modal-header {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-title { font-family: var(--display); font-size: 14px; color: var(--text-bright); font-weight: 600; }
+.modal-close { background: none; border: none; color: var(--text-dim); font-size: 18px; cursor: pointer; line-height: 1; }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 20px; }
+.modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; }
+
+.form-group { margin-bottom: 14px; }
+.form-group label { display: block; font-size: 10px; color: var(--text-dim); letter-spacing: 0.06em; margin-bottom: 6px; }
+.form-group input, .form-group textarea, .form-group select {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.form-group input:focus, .form-group textarea:focus { border-color: var(--gold); }
+.form-group textarea { resize: vertical; min-height: 70px; }
+.form-group .hint { font-size: 9px; color: var(--text-dim); margin-top: 4px; }
+
+/* ── Empty states ────────────────────────────────────────── */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-dim);
+}
+.empty-state .icon { font-size: 36px; margin-bottom: 12px; opacity: 0.4; }
+.empty-state .msg { font-family: var(--display); font-size: 13px; margin-bottom: 6px; color: var(--text); }
+.empty-state .sub { font-size: 11px; }
+
+/* ── Loading spinner ─────────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid rgba(255,255,255,0.2);
+  border-top-color: var(--gold);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast notification ──────────────────────────────────── */
+#toast {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--r);
+  padding: 10px 16px;
+  font-size: 12px;
+  color: var(--text-bright);
+  z-index: 200;
+  transition: opacity 0.3s;
+  pointer-events: none;
+  opacity: 0;
+}
+#toast.visible { opacity: 1; }
+#toast.ok   { border-left: 3px solid var(--green); }
+#toast.err  { border-left: 3px solid var(--red); }
+
+/* ── Publish price row ───────────────────────────────────── */
+.price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.price-row input { width: 100px; }
+.price-row .hint { font-size: 9px; color: var(--text-dim); }
+
+/* ── Author chip ─────────────────────────────────────────── */
+.author-chip {
+  font-size: 9px;
+  color: var(--text-dim);
+  padding: 1px 6px;
+  background: var(--bg3);
+  border-radius: 2px;
+}
+
+/* ── Stats row on marketplace card ──────────────────────── */
+.mkt-stats-row {
+  display: flex;
+  gap: 12px;
+  padding: 0 16px 10px;
+  flex-wrap: wrap;
+}
+.mkt-stat { display: flex; flex-direction: column; gap: 2px; }
+.mkt-stat-l { font-size: 9px; color: var(--text-dim); letter-spacing: 0.05em; }
+.mkt-stat-v { font-size: 12px; font-weight: 500; color: var(--text-bright); }
+.mkt-stat-v.pos { color: var(--green); }
+.mkt-stat-v.neg { color: var(--red); }
+</style>
+</head>
+
+<body>
+<div id="app">
+
+  <!-- Top Nav -->
+  <nav class="topnav">
+    <span class="topnav-logo">APEX</span>
+    <span class="topnav-sep">/</span>
+    <span class="topnav-title">STRATEGY MARKETPLACE</span>
+    <div class="credits-badge" id="creditsDisplay">
+      ◈ Credits: <span id="creditCount">—</span>
+    </div>
+    <a href="/" class="topnav-back">← Dashboard</a>
+  </nav>
+
+  <!-- Main Page -->
+  <div class="page">
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('mine')">MY STRATEGIES</button>
+      <button class="tab-btn" onclick="switchTab('browse')">BROWSE MARKETPLACE</button>
+    </div>
+
+    <!-- ── MY STRATEGIES TAB ───────────────────────────────────── -->
+    <div class="tab-panel active" id="tab-mine">
+      <div class="section-header">
+        <div>
+          <div class="section-title">MY STRATEGY LIBRARY</div>
+          <div class="section-sub">Save, backtest, and publish your trading strategies</div>
+        </div>
+        <button class="btn btn-gold" onclick="openSaveModal()">+ Save Current Strategy</button>
+      </div>
+      <div class="cards-grid" id="myStrategyGrid">
+        <div class="empty-state" id="myEmpty">
+          <div class="icon">📊</div>
+          <div class="msg">No strategies saved yet</div>
+          <div class="sub">Configure your rules on the dashboard, then save here to track performance</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── BROWSE MARKETPLACE TAB ─────────────────────────────── -->
+    <div class="tab-panel" id="tab-browse">
+      <div class="section-header">
+        <div>
+          <div class="section-title">MARKETPLACE</div>
+          <div class="section-sub">Discover and acquire community strategies with proven backtest results</div>
+        </div>
+      </div>
+      <div class="mkt-toolbar">
+        <select id="filterStrategy" onchange="applyFilters()">
+          <option value="">All Strategies</option>
+          <option value="momentum">Momentum</option>
+          <option value="daytrading">Day Trading</option>
+        </select>
+        <select id="sortBy" onchange="applyFilters()">
+          <option value="newest">Newest</option>
+          <option value="return">Highest Return</option>
+          <option value="winrate">Win Rate</option>
+          <option value="purchases">Most Purchased</option>
+        </select>
+        <span class="mkt-count" id="mktCount"></span>
+      </div>
+      <div class="cards-grid" id="mktGrid">
+        <div class="empty-state" id="mktEmpty">
+          <div class="icon">🏪</div>
+          <div class="msg">Marketplace is empty</div>
+          <div class="sub">Be the first to publish a strategy with a verified backtest</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- ── Save Strategy Modal ──────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="saveModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Save Strategy</span>
+      <button class="modal-close" onclick="closeSaveModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>STRATEGY NAME</label>
+        <input type="text" id="stratName" placeholder="e.g. BTC Momentum 1H">
+      </div>
+      <div class="form-group">
+        <label>DESCRIPTION</label>
+        <textarea id="stratDesc" placeholder="Brief description of your strategy setup..."></textarea>
+        <div class="hint">Optional — helps buyers understand the approach when published</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeSaveModal()">Cancel</button>
+      <button class="btn btn-gold" id="confirmSaveBtn" onclick="confirmSave()">Save Strategy</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Publish Modal ─────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="publishModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">Publish to Marketplace</span>
+      <button class="modal-close" onclick="closePublishModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:16px;">
+        Your strategy and its backtest results will be listed publicly.
+        Other traders can browse and acquire it using credits.
+      </p>
+      <div class="form-group">
+        <label>LISTING PRICE (CREDITS)</label>
+        <div class="price-row">
+          <input type="number" id="publishPrice" value="0" min="0" max="500" step="25">
+          <span class="hint">0 = free &nbsp;|&nbsp; max 500 credits</span>
+        </div>
+        <div class="hint" style="margin-top:8px;">New users receive 500 starting credits. You earn the price paid by each buyer.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closePublishModal()">Cancel</button>
+      <button class="btn btn-gold" id="confirmPublishBtn" onclick="confirmPublish()">Publish</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Backtest Modal ─────────────────────────────────────────────── -->
+<div class="modal-overlay hidden" id="btModal">
+  <div class="modal" style="width:560px;">
+    <div class="modal-header">
+      <span class="modal-title">Run Backtest</span>
+      <button class="modal-close" onclick="closeBtModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="bt-config" style="margin-bottom:16px;">
+        <label>PAIR</label>
+        <select id="btPair">
+          <option>BTCUSDT</option><option>ETHUSDT</option><option>BNBUSDT</option>
+          <option>SOLUSDT</option><option>XRPUSDT</option><option>ADAUSDT</option>
+          <option>DOGEUSDT</option><option>AVAXUSDT</option><option>LINKUSDT</option>
+        </select>
+        <label>INTERVAL</label>
+        <select id="btInterval">
+          <option value="1h">1h</option><option value="4h">4h</option>
+          <option value="15m">15m</option><option value="1d">1d</option>
+          <option value="30m">30m</option>
+        </select>
+        <label>CANDLES</label>
+        <select id="btLimit">
+          <option value="500">500</option>
+          <option value="1000" selected>1000</option>
+        </select>
+      </div>
+      <div id="btModalBody" style="font-size:11px;color:var(--text-dim);">
+        Configure the backtest above and click Run.
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeBtModal()">Close</button>
+      <button class="btn btn-gold" id="runBtBtn" onclick="runBacktest()">
+        <span id="runBtLabel">Run Backtest</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<script>
+'use strict';
+
+// ── State ───────────────────────────────────────────────────────────
+let currentTab       = 'mine';
+let myStrategies     = [];
+let mktListings      = [];
+let activeBtStratId  = null;   // which strategy we're backtesting
+let publishStratId   = null;   // which strategy we're publishing
+let btRunning        = false;
+
+// ── Init ────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  await Promise.all([loadCredits(), loadMyStrategies(), loadMarketplace()]);
+});
+
+// ── Tab switching ────────────────────────────────────────────────────
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', ['mine','browse'][i] === tab);
+  });
+  document.querySelectorAll('.tab-panel').forEach((p, i) => {
+    p.classList.toggle('active', ['tab-mine','tab-browse'][i] === `tab-${tab}`);
+  });
+}
+
+// ── Credits ──────────────────────────────────────────────────────────
+async function loadCredits() {
+  try {
+    const r = await fetch('/api/credits');
+    const d = await r.json();
+    document.getElementById('creditCount').textContent = d.credits ?? '—';
+  } catch {}
+}
+
+// ── My Strategies ────────────────────────────────────────────────────
+async function loadMyStrategies() {
+  try {
+    const r = await fetch('/api/strategies/mine');
+    myStrategies = await r.json();
+    renderMyStrategies();
+  } catch (e) {
+    showToast('Failed to load strategies', 'err');
+  }
+}
+
+function renderMyStrategies() {
+  const grid  = document.getElementById('myStrategyGrid');
+  const empty = document.getElementById('myEmpty');
+
+  if (!myStrategies.length) {
+    grid.innerHTML = '';
+    grid.appendChild(empty);
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = myStrategies.map(s => buildMyCard(s)).join('');
+}
+
+function buildMyCard(s) {
+  const bt      = s.backtest;
+  const hasbt   = !!bt && !bt.error;
+  const pub     = s.is_public;
+  const purch   = !!s.purchased_from;
+  const created = (s.created_at || '').slice(0, 10);
+  const strategy = (s.rules?.strategy || 'momentum').toUpperCase();
+  const pairs = Array.isArray(s.rules?.trade_pairs) ? s.rules.trade_pairs.slice(0,3).join(' ') : '';
+  const interval = s.rules?.interval || '';
+
+  const btStrip = hasbt ? `
+    <div class="bt-stats">
+      <div class="bt-stat">
+        <div class="bt-stat-label">RETURN</div>
+        <div class="bt-stat-val ${bt.total_return_pct >= 0 ? 'pos' : 'neg'}">${bt.total_return_pct >= 0 ? '+' : ''}${bt.total_return_pct}%</div>
+      </div>
+      <div class="bt-stat">
+        <div class="bt-stat-label">WIN RATE</div>
+        <div class="bt-stat-val">${bt.win_rate}%</div>
+      </div>
+      <div class="bt-stat">
+        <div class="bt-stat-label">MAX DD</div>
+        <div class="bt-stat-val neg">−${bt.max_drawdown_pct}%</div>
+      </div>
+      <div class="bt-stat">
+        <div class="bt-stat-label">TRADES</div>
+        <div class="bt-stat-val">${bt.total_trades}</div>
+      </div>
+    </div>
+    ${buildEquitySVG(bt.equity_curve)}
+  ` : '';
+
+  const pubTag  = pub  ? `<span class="tag tag-published">LISTED</span>` : '';
+  const purchTag = purch ? `<span class="tag tag-purchased">ACQUIRED</span>` : '';
+
+  const footerBtns = purch ? `
+    <button class="btn btn-ghost btn-sm" onclick="openLoadModal('${s.id}')">Load Rules</button>
+    <button class="btn btn-ghost btn-sm" onclick="openBtModal('${s.id}')">↻ Backtest</button>
+    <span class="card-date">${created}</span>
+  ` : `
+    <button class="btn btn-ghost btn-sm" onclick="openBtModal('${s.id}')">
+      ${hasbt ? '↻ Re-run' : '▶ Backtest'}
+    </button>
+    <button class="btn btn-ghost btn-sm" onclick="openLoadModal('${s.id}')">Load Rules</button>
+    ${!pub && hasbt ? `<button class="btn btn-gold btn-sm" onclick="openPublishModal('${s.id}')">Publish</button>` : ''}
+    ${pub ? `<button class="btn btn-ghost btn-sm" onclick="unpublish('${s.id}')">Unpublish</button>` : ''}
+    <button class="btn btn-danger btn-sm" onclick="deleteStrategy('${s.id}')">Delete</button>
+    <span class="card-date">${created}</span>
+  `;
+
+  return `
+  <div class="strategy-card ${hasbt ? 'has-backtest' : ''} ${pub ? 'published' : ''}" id="card-${s.id}">
+    <div class="card-header">
+      <div class="card-icon">${strategy === 'DAYTRADING' ? '⚡' : '📈'}</div>
+      <div class="card-title-group">
+        <div class="card-name">${escHtml(s.name)}</div>
+        <div class="card-meta">
+          <span class="tag tag-strategy">${strategy}</span>
+          ${pairs ? `<span class="tag tag-pair">${escHtml(pairs)}</span>` : ''}
+          ${interval ? `<span class="tag tag-interval">${interval}</span>` : ''}
+          ${pubTag}${purchTag}
+        </div>
+      </div>
+    </div>
+    ${s.description ? `<div class="card-desc">${escHtml(s.description)}</div>` : ''}
+    ${btStrip}
+    <div class="card-footer">${footerBtns}</div>
+  </div>`;
+}
+
+// ── Marketplace ──────────────────────────────────────────────────────
+async function loadMarketplace() {
+  try {
+    const r = await fetch('/api/marketplace');
+    const d = await r.json();
+    mktListings = d.listings || [];
+    document.getElementById('creditCount').textContent = d.credits ?? '—';
+    applyFilters();
+  } catch (e) {
+    showToast('Failed to load marketplace', 'err');
+  }
+}
+
+function applyFilters() {
+  const filterStrat = document.getElementById('filterStrategy').value;
+  const sortKey     = document.getElementById('sortBy').value;
+
+  let list = [...mktListings];
+  if (filterStrat) list = list.filter(s => s.rules?.strategy === filterStrat);
+
+  if (sortKey === 'return')    list.sort((a,b) => (b.backtest?.total_return_pct||0) - (a.backtest?.total_return_pct||0));
+  else if (sortKey === 'winrate') list.sort((a,b) => (b.backtest?.win_rate||0) - (a.backtest?.win_rate||0));
+  else if (sortKey === 'purchases') list.sort((a,b) => (b.purchases||0) - (a.purchases||0));
+
+  document.getElementById('mktCount').textContent = `${list.length} listing${list.length !== 1 ? 's' : ''}`;
+  renderMarketplace(list);
+}
+
+function renderMarketplace(list) {
+  const grid  = document.getElementById('mktGrid');
+  const empty = document.getElementById('mktEmpty');
+
+  if (!list.length) {
+    grid.innerHTML = '';
+    grid.appendChild(empty);
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  grid.innerHTML = list.map(s => buildMktCard(s)).join('');
+}
+
+function buildMktCard(s) {
+  const bt       = s.backtest;
+  const hasbt    = !!bt && !bt.error;
+  const strategy = (s.rules?.strategy || 'momentum').toUpperCase();
+  const price    = s.price_credits || 0;
+  const owned    = s.owned;
+  const ismine   = s.is_mine;
+  const published = (s.published_at || s.created_at || '').slice(0, 10);
+  const pair     = bt?.pair || (Array.isArray(s.rules?.trade_pairs) ? s.rules.trade_pairs[0] : '');
+  const interval = bt?.interval || s.rules?.interval || '';
+
+  const priceBadge = price === 0
+    ? `<span class="price-badge free">FREE</span>`
+    : `<span class="price-badge paid">◈ ${price}</span>`;
+
+  const btStats = hasbt ? `
+    <div class="mkt-stats-row">
+      <div class="mkt-stat">
+        <div class="mkt-stat-l">RETURN</div>
+        <div class="mkt-stat-v ${bt.total_return_pct >= 0 ? 'pos' : 'neg'}">${bt.total_return_pct >= 0 ? '+' : ''}${bt.total_return_pct}%</div>
+      </div>
+      <div class="mkt-stat">
+        <div class="mkt-stat-l">WIN RATE</div>
+        <div class="mkt-stat-v">${bt.win_rate}%</div>
+      </div>
+      <div class="mkt-stat">
+        <div class="mkt-stat-l">MAX DD</div>
+        <div class="mkt-stat-v neg">−${bt.max_drawdown_pct}%</div>
+      </div>
+      <div class="mkt-stat">
+        <div class="mkt-stat-l">TRADES</div>
+        <div class="mkt-stat-v">${bt.total_trades}</div>
+      </div>
+      ${bt.profit_factor != null ? `
+      <div class="mkt-stat">
+        <div class="mkt-stat-l">PF</div>
+        <div class="mkt-stat-v ${bt.profit_factor >= 1 ? 'pos' : 'neg'}">${bt.profit_factor}</div>
+      </div>` : ''}
+    </div>
+    ${buildEquitySVG(bt.equity_curve)}
+  ` : '';
+
+  const actionBtn = ismine
+    ? `<span style="font-size:10px;color:var(--text-dim);">Your listing</span>`
+    : owned
+    ? `<button class="btn btn-ghost btn-sm" disabled>✓ Owned</button>`
+    : `<button class="btn btn-gold btn-sm" onclick="purchaseStrategy('${s.id}',${price})">${price === 0 ? 'Add Free' : `Buy ◈ ${price}`}</button>`;
+
+  return `
+  <div class="strategy-card has-backtest" id="mkt-${s.id}">
+    <div class="card-header">
+      <div class="card-icon">${strategy === 'DAYTRADING' ? '⚡' : '📈'}</div>
+      <div class="card-title-group">
+        <div class="card-name">${escHtml(s.name)}</div>
+        <div class="card-meta">
+          <span class="tag tag-strategy">${strategy}</span>
+          ${pair ? `<span class="tag tag-pair">${escHtml(pair)}</span>` : ''}
+          ${interval ? `<span class="tag tag-interval">${interval}</span>` : ''}
+          <span class="author-chip">by ${escHtml(s.author)}</span>
+        </div>
+      </div>
+    </div>
+    ${s.description ? `<div class="card-desc">${escHtml(s.description)}</div>` : ''}
+    ${btStats}
+    <div class="card-footer">
+      ${priceBadge}
+      ${s.purchases ? `<span style="font-size:10px;color:var(--text-dim);">${s.purchases} acquired</span>` : ''}
+      ${actionBtn}
+      <span class="card-date">${published}</span>
+    </div>
+  </div>`;
+}
+
+// ── Equity SVG sparkline ─────────────────────────────────────────────
+function buildEquitySVG(curve) {
+  if (!curve || curve.length < 2) return '';
+  const values = curve.map(p => p.equity);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const w = 100, h = 36, pad = 4;
+  const pts = values.map((v, i) => {
+    const x = pad + (i / (values.length - 1)) * (w - pad * 2);
+    const y = pad + (1 - (v - min) / range) * (h - pad * 2);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const isPos = values[values.length - 1] >= values[0];
+  const color = isPos ? '#00C07F' : '#FF3B5C';
+  return `<div class="equity-chart">
+    <svg viewBox="0 0 100 36" preserveAspectRatio="none">
+      <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+    </svg>
+  </div>`;
+}
+
+// ── Save Strategy ────────────────────────────────────────────────────
+function openSaveModal() {
+  document.getElementById('stratName').value = '';
+  document.getElementById('stratDesc').value = '';
+  document.getElementById('saveModal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('stratName').focus(), 50);
+}
+function closeSaveModal() {
+  document.getElementById('saveModal').classList.add('hidden');
+}
+async function confirmSave() {
+  const name = document.getElementById('stratName').value.trim();
+  const desc = document.getElementById('stratDesc').value.trim();
+  if (!name) { showToast('Strategy name is required', 'err'); return; }
+  const btn = document.getElementById('confirmSaveBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving…';
+  try {
+    const r = await fetch('/api/strategies/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({name, description: desc}),
+    });
+    const d = await r.json();
+    if (d.error) { showToast(d.error, 'err'); return; }
+    closeSaveModal();
+    showToast('Strategy saved', 'ok');
+    await loadMyStrategies();
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Strategy';
+  }
+}
+
+// ── Delete Strategy ──────────────────────────────────────────────────
+async function deleteStrategy(id) {
+  if (!confirm('Delete this strategy? This cannot be undone.')) return;
+  await fetch(`/api/strategies/${id}`, {method: 'DELETE'});
+  showToast('Strategy deleted', 'ok');
+  await loadMyStrategies();
+}
+
+// ── Load Strategy Rules ──────────────────────────────────────────────
+async function openLoadModal(id) {
+  if (!confirm('Load this strategy\'s rules as your current dashboard settings?')) return;
+  const r = await fetch(`/api/strategies/${id}/load`, {method: 'POST'});
+  const d = await r.json();
+  if (d.error) { showToast(d.error, 'err'); return; }
+  showToast('Rules loaded — switch to Dashboard to trade', 'ok');
+}
+
+// ── Backtest Modal ───────────────────────────────────────────────────
+function openBtModal(stratId) {
+  activeBtStratId = stratId;
+  document.getElementById('btModalBody').innerHTML = 'Configure the backtest above and click Run.';
+  document.getElementById('btModal').classList.remove('hidden');
+  // Pre-set the pair/interval from strategy rules
+  const strat = myStrategies.find(s => s.id === stratId);
+  if (strat?.rules) {
+    const pairs = strat.rules.trade_pairs;
+    if (Array.isArray(pairs) && pairs.length) {
+      const sel = document.getElementById('btPair');
+      const opt = [...sel.options].find(o => o.value === pairs[0]);
+      if (opt) sel.value = pairs[0];
+    }
+    const interval = strat.rules.interval;
+    if (interval) {
+      const sel = document.getElementById('btInterval');
+      const opt = [...sel.options].find(o => o.value === interval);
+      if (opt) sel.value = interval;
+    }
+  }
+}
+function closeBtModal() {
+  document.getElementById('btModal').classList.add('hidden');
+  activeBtStratId = null;
+}
+
+async function runBacktest() {
+  if (!activeBtStratId || btRunning) return;
+  btRunning = true;
+  const btn   = document.getElementById('runBtBtn');
+  const label = document.getElementById('runBtLabel');
+  btn.disabled = true;
+  label.innerHTML = '<span class="spinner"></span> Running…';
+
+  const pair     = document.getElementById('btPair').value;
+  const interval = document.getElementById('btInterval').value;
+  const limit    = parseInt(document.getElementById('btLimit').value);
+  const body     = document.getElementById('btModalBody');
+
+  body.innerHTML = `<span class="spinner"></span> Fetching ${limit} ${interval} candles for ${pair}…`;
+
+  try {
+    const r = await fetch(`/api/strategies/${activeBtStratId}/backtest`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pair, interval, limit}),
+    });
+    const d = await r.json();
+    if (d.error) { body.innerHTML = `<span style="color:var(--red)">${escHtml(d.error)}</span>`; return; }
+    const bt = d.backtest;
+    body.innerHTML = renderBtResult(bt);
+    showToast('Backtest complete', 'ok');
+    await loadMyStrategies();
+  } catch (e) {
+    body.innerHTML = `<span style="color:var(--red)">Error: ${escHtml(String(e))}</span>`;
+  } finally {
+    btRunning = false;
+    btn.disabled = false;
+    label.textContent = 'Re-run';
+  }
+}
+
+function renderBtResult(bt) {
+  const returnCls = bt.total_return_pct >= 0 ? 'pos' : 'neg';
+  const returnStr = `${bt.total_return_pct >= 0 ? '+' : ''}${bt.total_return_pct}%`;
+  const svg = buildEquitySVG(bt.equity_curve);
+
+  const trades = (bt.trades || []).slice(-10).reverse().map(t => {
+    const win = t.pnl_usdt > 0;
+    const reasonMap = {stop_loss:'SL',take_profit:'TP',time_stop:'Time',end_of_data:'EOD'};
+    return `<tr>
+      <td>${t.entry_time?.slice(0,10)||'—'}</td>
+      <td>${t.exit_price?.toFixed(2)||'—'}</td>
+      <td class="${win?'win':'loss'}">${win?'+':''}${t.pnl_usdt?.toFixed(2)||0} $</td>
+      <td class="${win?'win':'loss'}">${win?'+':''}${t.pnl_pct}%</td>
+      <td>${reasonMap[t.reason]||t.reason}</td>
+    </tr>`;
+  }).join('');
+
+  return `
+    <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;">
+      ${statBox('RETURN', returnStr, returnCls)}
+      ${statBox('WIN RATE', bt.win_rate + '%', '')}
+      ${statBox('MAX DRAWDOWN', '−' + bt.max_drawdown_pct + '%', 'neg')}
+      ${statBox('TRADES', bt.total_trades, '')}
+      ${statBox('PROFIT FACTOR', bt.profit_factor ?? 'N/A', bt.profit_factor >= 1 ? 'pos' : 'neg')}
+    </div>
+    ${svg ? `<div style="margin:0 -20px 10px;">${svg}</div>` : ''}
+    ${trades ? `
+    <div style="font-size:10px;color:var(--text-dim);margin-bottom:4px;letter-spacing:0.05em;">LAST ${Math.min(10,bt.total_trades)} TRADES</div>
+    <table class="trades-table">
+      <thead><tr><th>Date</th><th>Exit</th><th>PnL $</th><th>PnL %</th><th>Reason</th></tr></thead>
+      <tbody>${trades}</tbody>
+    </table>` : '<div style="color:var(--text-dim);font-size:11px;">No trades generated</div>'}
+    <div style="margin-top:8px;font-size:9px;color:var(--text-dim);">
+      ${bt.pair} / ${bt.strategy} / ${bt.total_candles} candles / paper $${bt.starting_capital?.toLocaleString()}
+    </div>`;
+}
+
+function statBox(label, val, cls) {
+  return `<div style="background:var(--bg3);border-radius:4px;padding:8px;text-align:center;">
+    <div style="font-size:9px;color:var(--text-dim);margin-bottom:3px;">${label}</div>
+    <div style="font-size:13px;font-weight:500;" class="${cls}">${val}</div>
+  </div>`;
+}
+
+// ── Publish ──────────────────────────────────────────────────────────
+function openPublishModal(id) {
+  publishStratId = id;
+  document.getElementById('publishPrice').value = '0';
+  document.getElementById('publishModal').classList.remove('hidden');
+}
+function closePublishModal() {
+  document.getElementById('publishModal').classList.add('hidden');
+  publishStratId = null;
+}
+async function confirmPublish() {
+  if (!publishStratId) return;
+  const price = parseInt(document.getElementById('publishPrice').value) || 0;
+  const btn   = document.getElementById('confirmPublishBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Publishing…';
+  try {
+    const r = await fetch(`/api/strategies/${publishStratId}/publish`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({price_credits: price}),
+    });
+    const d = await r.json();
+    if (d.error) { showToast(d.error, 'err'); return; }
+    closePublishModal();
+    showToast('Strategy published to marketplace!', 'ok');
+    await Promise.all([loadMyStrategies(), loadMarketplace()]);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Publish';
+  }
+}
+
+async function unpublish(id) {
+  if (!confirm('Remove this strategy from the marketplace?')) return;
+  const r = await fetch(`/api/strategies/${id}/unpublish`, {method: 'POST'});
+  const d = await r.json();
+  if (d.ok) {
+    showToast('Strategy removed from marketplace', 'ok');
+    await Promise.all([loadMyStrategies(), loadMarketplace()]);
+  } else {
+    showToast('Could not unpublish strategy', 'err');
+  }
+}
+
+// ── Purchase ─────────────────────────────────────────────────────────
+async function purchaseStrategy(id, price) {
+  const msg = price === 0
+    ? 'Add this free strategy to your library?'
+    : `Purchase this strategy for ${price} credits?`;
+  if (!confirm(msg)) return;
+  const r = await fetch(`/api/marketplace/${id}/purchase`, {method: 'POST'});
+  const d = await r.json();
+  if (d.error) { showToast(d.error, 'err'); return; }
+  document.getElementById('creditCount').textContent = d.credits;
+  showToast('Strategy added to your library!', 'ok');
+  await Promise.all([loadMyStrategies(), loadMarketplace()]);
+  switchTab('mine');
+}
+
+// ── Utilities ────────────────────────────────────────────────────────
+let toastTimer = null;
+function showToast(msg, type = '') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className   = `visible ${type}`;
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.remove('visible'); }, 3000);
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Close modals on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.classList.add('hidden');
+  });
+});
+</script>
+</body>
+</html>
