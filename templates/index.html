@@ -464,6 +464,28 @@
   }
   .reset-defaults-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
 
+  /* ── Loaded strategy banner ──────────────────────────── */
+  .loaded-strategy-banner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    background: rgba(240,185,11,0.07);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--gold-dim);
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .loaded-strategy-banner .ls-icon { font-size: 12px; }
+  .loaded-strategy-banner .ls-name { color: var(--gold); font-weight: 600; }
+  .loaded-strategy-banner .ls-author { color: var(--text-dim); }
+  .loaded-strategy-banner .ls-clear {
+    margin-left: auto;
+    background: none; border: none; color: var(--muted); font-size: 14px;
+    cursor: pointer; line-height: 1; padding: 0 2px;
+  }
+  .loaded-strategy-banner .ls-clear:hover { color: var(--text); }
+
   /* ── Strategy tabs ───────────────────────────────────── */
   .strat-tabs {
     display: flex; margin: 0 0 10px; border: 1px solid var(--border2);
@@ -1068,6 +1090,8 @@
         <button class="strat-tab active" id="tab-strat-momentum" onclick="setStrategy('momentum')">Momentum</button>
         <button class="strat-tab" id="tab-strat-daytrading" onclick="setStrategy('daytrading')">Day Trade</button>
       </div>
+      <!-- Loaded marketplace strategy indicator -->
+      <div id="loaded-strategy-banner" style="display:none"></div>
       <!-- AI insight panel — shown after AI Decide -->
       <div class="ai-panel" id="ai-panel">
         <div class="ai-panel-header">
@@ -1738,6 +1762,34 @@
 // ── State ──────────────────────────────────────────────────────────
 let activeStrategy = 'momentum';
 
+function renderActiveStrategyBanner(meta) {
+  const el = document.getElementById('loaded-strategy-banner');
+  if (!el) return;
+  if (!meta) {
+    el.style.display = 'none';
+    el.innerHTML = '';
+    return;
+  }
+  const loaded = (meta.loaded_at || '').slice(0, 10);
+  el.className = 'loaded-strategy-banner';
+  el.style.display = '';
+  el.innerHTML = `
+    <span class="ls-icon">📋</span>
+    <span>Loaded: <span class="ls-name">${escHtml(meta.name)}</span>
+    <span class="ls-author">by ${escHtml(meta.author)}</span>
+    ${loaded ? `<span style="color:var(--muted)"> · ${loaded}</span>` : ''}</span>
+    <button class="ls-clear" title="Clear — revert to custom rules" onclick="clearLoadedStrategy()">×</button>`;
+}
+
+async function clearLoadedStrategy() {
+  await fetch('/api/active-strategy', { method: 'DELETE' });
+  renderActiveStrategyBanner(null);
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
 function setStrategy(s) {
   activeStrategy = s;
   document.getElementById('ctrl-momentum').style.display  = s === 'momentum'  ? '' : 'none';
@@ -2175,8 +2227,10 @@ function setToggle(id, val) {
 
 async function loadRules() {
   try {
-    const r = await fetch('/api/rules');
-    const d = await r.json();
+    const r    = await fetch('/api/rules');
+    const resp = await r.json();
+    const d    = resp.rules ?? resp;   // backwards compat
+    renderActiveStrategyBanner(resp.active_strategy ?? null);
 
     // Always-on numeric controls
     document.getElementById('r-rsi-low').value    = d.rsi_dip_low          ?? 38;
@@ -2326,6 +2380,7 @@ async function saveRules() {
       prependLogEntries(data.log_entries);
     }
 
+    renderActiveStrategyBanner(null);   // custom save clears the loaded strategy indicator
     btn.textContent = '✓ Saved';
     btn.style.background = 'rgba(0,192,127,0.15)';
     btn.style.borderColor = 'var(--green)';

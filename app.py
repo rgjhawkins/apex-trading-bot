@@ -17,7 +17,7 @@ from src.marketplace.store import (
     get_my_strategies, save_strategy, delete_strategy,
     update_strategy_backtest, publish_strategy, unpublish_strategy,
     get_marketplace_listings, purchase_strategy, get_strategy_rules,
-    get_credits,
+    get_credits, get_active_strategy, set_active_strategy, clear_active_strategy,
 )
 from src.marketplace.backtest import run_backtest
 
@@ -394,7 +394,10 @@ def api_open_orders():
 @app.route("/api/rules", methods=["GET"])
 def get_rules():
     username = session.get("username", "")
-    return jsonify(load_rules(username))
+    return jsonify({
+        "rules":           load_rules(username),
+        "active_strategy": get_active_strategy(username),
+    })
 
 
 _RULE_LABELS = {
@@ -470,6 +473,7 @@ def set_rules():
         for k in _RULE_LABELS
         if current.get(k) != saved.get(k)
     ]
+    clear_active_strategy(username)   # manual save overrides any loaded strategy
     if changes:
         eng._log("INFO", f"Rules updated — {len(changes)} change{'s' if len(changes) > 1 else ''}")
         for change in changes:
@@ -664,13 +668,22 @@ def api_delete_strategy(strategy_id):
 @app.route("/api/strategies/<strategy_id>/load", methods=["POST"])
 def api_load_strategy(strategy_id):
     """Apply a saved strategy's rules as the user's current rules."""
-    username = session.get("username", "")
-    rules    = get_strategy_rules(username, strategy_id)
-    if rules is None:
+    username   = session.get("username", "")
+    strategies = get_my_strategies(username)
+    strategy   = next((s for s in strategies if s["id"] == strategy_id), None)
+    if strategy is None:
         return jsonify({"error": "Strategy not found or not owned"}), 404
-    saved = save_rules(username, rules)
-    get_engine(username)._log("INFO", f"Strategy loaded from library")
+    saved = save_rules(username, strategy["rules"])
+    set_active_strategy(username, strategy_id, strategy["name"], strategy["author"])
+    get_engine(username)._log("INFO", f"Strategy loaded: {strategy['name']}")
     return jsonify({"rules": saved})
+
+
+@app.route("/api/active-strategy", methods=["DELETE"])
+def api_clear_active_strategy():
+    username = session.get("username", "")
+    clear_active_strategy(username)
+    return jsonify({"ok": True})
 
 
 @app.route("/api/backtest", methods=["POST"])

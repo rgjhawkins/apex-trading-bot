@@ -16,6 +16,7 @@ _DATA_DIR        = "/data" if os.path.isdir("/data") else os.path.abspath(
                        os.path.join(os.path.dirname(__file__), "../../"))
 MARKETPLACE_FILE = os.path.join(_DATA_DIR, "marketplace_strategies.json")
 CREDITS_FILE     = os.path.join(_DATA_DIR, "user_credits.json")
+ACTIVE_FILE      = os.path.join(_DATA_DIR, "active_strategy.json")
 STARTING_CREDITS = 500
 
 
@@ -212,3 +213,32 @@ def get_strategy_rules(username: str, strategy_id: str) -> dict | None:
         if s["id"] == strategy_id:
             return s.get("rules")
     return None
+
+
+# ── Active loaded strategy (dashboard indicator) ───────────────────────────
+
+def _active_store() -> dict:
+    return _load(ACTIVE_FILE, {})
+
+
+def get_active_strategy(username: str) -> dict | None:
+    """Return metadata for the currently loaded marketplace strategy, or None."""
+    return _active_store().get(username)
+
+
+def set_active_strategy(username: str, strategy_id: str, name: str, author: str):
+    data = _active_store()
+    data[username] = {
+        "id":        strategy_id,
+        "name":      name,
+        "author":    author,
+        "loaded_at": datetime.utcnow().isoformat(),
+    }
+    _save(ACTIVE_FILE, data)
+
+
+def clear_active_strategy(username: str):
+    data = _active_store()
+    if username in data:
+        del data[username]
+        _save(ACTIVE_FILE, data)
