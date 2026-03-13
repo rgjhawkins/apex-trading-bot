@@ -649,28 +649,7 @@ def api_save_strategy():
     if not name:
         return jsonify({"error": "Name is required"}), 400
 
-    rules       = load_rules(username)
-    strategy    = rules.get("strategy", "momentum")
-    min_secs    = _RUNTIME_MINS.get(strategy, _RUNTIME_MINS["daytrading"])
-    eng         = get_engine(username)
-    runtime_s   = _get_total_runtime(username, eng)
-
-    if runtime_s < min_secs:
-        remaining_s = min_secs - runtime_s
-        if strategy == "daytrading":
-            remaining_label = f"{remaining_s / 3600:.1f}h more"
-            required_label  = "24 hours"
-        else:
-            remaining_label = f"{remaining_s / 86400:.1f} more days"
-            required_label  = "1 week"
-        return jsonify({
-            "error":         f"Run the bot for at least {required_label} before saving a {strategy} strategy. "
-                             f"You need {remaining_label}.",
-            "runtime_s":     runtime_s,
-            "required_s":    min_secs,
-            "remaining_s":   remaining_s,
-        }), 400
-
+    rules = load_rules(username)
     saved = save_strategy(username, name, desc, rules)
     return jsonify(saved)
 
