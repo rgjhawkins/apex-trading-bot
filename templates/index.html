@@ -2284,12 +2284,12 @@ async function loadRules() {
 
     // Day trading params
     document.getElementById('r-dt-rise-pct').value   = d.dt_price_rise_pct    ?? 1.5;
-    document.getElementById('r-dt-lookback').value   = d.dt_lookback_candles  ?? 5;
-    document.getElementById('r-dt-vol-mult').value   = d.dt_volume_mult       ?? 2.0;
-    document.getElementById('r-dt-max-rsi').value    = d.dt_max_rsi           ?? 72;
-    document.getElementById('r-dt-trail-pct').value  = d.dt_trailing_stop_pct ?? 0.75;
-    document.getElementById('r-dt-tp-pct').value     = d.dt_take_profit_pct   ?? 2.0;
-    document.getElementById('r-dt-breakeven').value  = d.dt_breakeven_pct     ?? 0.5;
+    document.getElementById('r-dt-lookback').value   = d.dt_lookback_candles  ?? 3;
+    document.getElementById('r-dt-vol-mult').value   = d.dt_volume_mult       ?? 1.5;
+    document.getElementById('r-dt-max-rsi').value    = d.dt_max_rsi           ?? 75;
+    document.getElementById('r-dt-trail-pct').value  = d.dt_trailing_stop_pct ?? 1.5;
+    document.getElementById('r-dt-tp-pct').value     = d.dt_take_profit_pct   ?? 3.0;
+    document.getElementById('r-dt-breakeven').value  = d.dt_breakeven_pct     ?? 1.0;
     document.getElementById('r-dt-time-stop').value  = d.dt_time_stop_candles ?? 20;
 
     // Screener
