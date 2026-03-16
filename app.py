@@ -724,7 +724,7 @@ def api_backtest_strategy(strategy_id):
         return jsonify({"error": "Strategy not found"}), 404
 
     data     = request.json or {}
-    pair     = (data.get("pair") or rules.get("trade_pairs", ["BTCUSDT"])[0]).upper()
+    pair     = (data.get("pair") or (rules.get("trade_pairs") or ["BTCUSDT"])[0]).upper()
     interval = data.get("interval") or rules.get("interval", "1h")
     limit    = min(int(data.get("limit", 1000)), 1000)
 

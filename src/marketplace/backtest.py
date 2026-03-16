@@ -73,57 +73,81 @@ def run_backtest(klines_raw: list, rules: dict,
             pos["highest_price"] = max(pos["highest_price"], current_close)
             high = pos["highest_price"]
 
-            # Build stop price
-            atr_stop = entry - atr * rules.get("atr_stop_mult", 2.0)
-            if rules.get("breakeven_stop_enabled", True) and pos.get("tp1_hit"):
-                atr_stop = max(atr_stop, entry)
-
-            trailing_stop = None
-            if rules.get("trailing_stop_enabled", True):
-                trail_pct     = rules.get("trailing_stop_pct", 2.5) / 100.0
-                trailing_stop = high * (1.0 - trail_pct)
-
-            stop_price = atr_stop
-            if trailing_stop is not None:
-                stop_price = max(stop_price, trailing_stop)
-
-            # TP levels
-            tp1_price    = entry + atr * rules.get("atr_tp1_mult", 2.5)
-            init_risk    = entry - pos["initial_stop"]
-            r_mult_tp    = entry + init_risk * rules.get("r_multiple", 2.0) if init_risk > 0 else None
-
             exit_price  = None
             exit_reason = None
 
-            # ── Check exits ────────────────────────────────────────
-            if current_close <= stop_price:
-                exit_price  = stop_price
-                exit_reason = "stop_loss"
+            if strategy == "daytrading":
+                # ── Day-trading exit logic ─────────────────────────
+                trail_pct     = rules.get("dt_trailing_stop_pct", 1.5) / 100.0
+                trailing_stop = high * (1.0 - trail_pct)
+                breakeven_pct = rules.get("dt_breakeven_pct", 1.0) / 100.0
 
-            elif not pos.get("tp1_hit") and current_close >= tp1_price:
-                # Partial TP1 — exit a portion now
-                tp1_exit_pct = rules.get("tp1_exit_pct", 50.0) / 100.0
-                tp1_qty      = pos["qty"] * tp1_exit_pct
-                tp1_cost     = tp1_qty * entry
-                tp1_pnl      = (tp1_price - entry) * tp1_qty
-                capital     += tp1_cost + tp1_pnl
-                pos["tp1_pnl"]  = tp1_pnl
-                pos["tp1_hit"]  = True
-                pos["qty"]     *= (1.0 - tp1_exit_pct)
-                pos["cost"]    *= (1.0 - tp1_exit_pct)
-                if rules.get("breakeven_stop_enabled", True):
-                    pos["initial_stop"] = entry
+                if not pos.get("breakeven_active") and current_close >= entry * (1.0 + breakeven_pct):
+                    pos["breakeven_active"] = True
 
-            elif r_mult_tp and current_close >= r_mult_tp:
-                exit_price  = r_mult_tp
-                exit_reason = "take_profit"
+                stop_price = trailing_stop
+                if pos.get("breakeven_active"):
+                    stop_price = max(stop_price, entry)
 
-            # Time stop — only on losing positions
-            if (exit_price is None
-                    and pos["candles_held"] >= rules.get("time_stop_candles", 24)
-                    and current_close < entry):
-                exit_price  = current_close
-                exit_reason = "time_stop"
+                tp_price = entry * (1.0 + rules.get("dt_take_profit_pct", 3.0) / 100.0)
+
+                if current_close >= tp_price:
+                    exit_price  = tp_price
+                    exit_reason = "take_profit"
+                elif current_close <= stop_price:
+                    exit_price  = stop_price
+                    exit_reason = "breakeven" if pos.get("breakeven_active") and stop_price >= entry else "trail_stop"
+
+                time_stop = int(rules.get("dt_time_stop_candles", 20))
+                if exit_price is None and pos["candles_held"] >= time_stop and current_close < entry:
+                    exit_price  = current_close
+                    exit_reason = "time_stop"
+
+            else:
+                # ── Momentum exit logic ────────────────────────────
+                atr_stop = entry - atr * rules.get("atr_stop_mult", 2.0)
+                if rules.get("breakeven_stop_enabled", True) and pos.get("tp1_hit"):
+                    atr_stop = max(atr_stop, entry)
+
+                trailing_stop = None
+                if rules.get("trailing_stop_enabled", True):
+                    trail_pct     = rules.get("trailing_stop_pct", 2.5) / 100.0
+                    trailing_stop = high * (1.0 - trail_pct)
+
+                stop_price = atr_stop
+                if trailing_stop is not None:
+                    stop_price = max(stop_price, trailing_stop)
+
+                tp1_price = entry + atr * rules.get("atr_tp1_mult", 2.5)
+                init_risk = entry - pos["initial_stop"]
+                r_mult_tp = entry + init_risk * rules.get("r_multiple", 2.0) if init_risk > 0 else None
+
+                if current_close <= stop_price:
+                    exit_price  = stop_price
+                    exit_reason = "stop_loss"
+
+                elif not pos.get("tp1_hit") and current_close >= tp1_price:
+                    tp1_exit_pct = rules.get("tp1_exit_pct", 50.0) / 100.0
+                    tp1_qty      = pos["qty"] * tp1_exit_pct
+                    tp1_cost     = tp1_qty * entry
+                    tp1_pnl      = (tp1_price - entry) * tp1_qty
+                    capital     += tp1_cost + tp1_pnl
+                    pos["tp1_pnl"]  = tp1_pnl
+                    pos["tp1_hit"]  = True
+                    pos["qty"]     *= (1.0 - tp1_exit_pct)
+                    pos["cost"]    *= (1.0 - tp1_exit_pct)
+                    if rules.get("breakeven_stop_enabled", True):
+                        pos["initial_stop"] = entry
+
+                elif r_mult_tp and current_close >= r_mult_tp:
+                    exit_price  = r_mult_tp
+                    exit_reason = "take_profit"
+
+                if (exit_price is None
+                        and pos["candles_held"] >= rules.get("time_stop_candles", 24)
+                        and current_close < entry):
+                    exit_price  = current_close
+                    exit_reason = "time_stop"
 
             if exit_price is not None:
                 pnl      = (exit_price - entry) / entry * pos["cost"]
@@ -173,10 +197,14 @@ def run_backtest(klines_raw: list, rules: dict,
         if not sig.get("signal"):
             continue
 
-        atr          = sig.get("atr", float(current_bar["atr"]))
-        stop_price   = current_close - atr * rules.get("atr_stop_mult", 2.0)
-        risk_pct     = rules.get("risk_per_trade_pct", 1.0) / 100.0
-        risk_capital = capital * risk_pct
+        atr = sig.get("atr", float(current_bar["atr"]))
+        if strategy == "daytrading":
+            trail_pct     = rules.get("dt_trailing_stop_pct", 1.5) / 100.0
+            stop_price    = current_close * (1.0 - trail_pct)
+        else:
+            stop_price    = current_close - atr * rules.get("atr_stop_mult", 2.0)
+        risk_pct      = rules.get("risk_per_trade_pct", 1.0) / 100.0
+        risk_capital  = capital * risk_pct
         risk_per_unit = current_close - stop_price
 
         if risk_per_unit <= 0:
@@ -195,15 +223,16 @@ def run_backtest(klines_raw: list, rules: dict,
 
         capital -= cost
         open_positions.append({
-            "entry_price":   current_close,
-            "entry_time":    candle_time,
-            "qty":           qty,
-            "cost":          cost,
-            "initial_stop":  stop_price,
-            "highest_price": current_close,
-            "tp1_hit":       False,
-            "tp1_pnl":       0.0,
-            "candles_held":  0,
+            "entry_price":      current_close,
+            "entry_time":       candle_time,
+            "qty":              qty,
+            "cost":             cost,
+            "initial_stop":     stop_price,
+            "highest_price":    current_close,
+            "tp1_hit":          False,
+            "tp1_pnl":          0.0,
+            "candles_held":     0,
+            "breakeven_active": False,
         })
 
     # ── Close any remaining positions at the last bar ──────────────
