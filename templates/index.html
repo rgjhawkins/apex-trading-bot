@@ -2607,6 +2607,7 @@ async function resetDefaults() {
     setToggle('rmult', d.r_multiple_tp_enabled);        set('r-rmult-val', d.r_multiple);
   }
 
+  setStrategy(strategy);   // lock tab to what was active — never switch away
   ALL_SLIDERS.forEach(syncSlider);
   await saveRules();
   showToast(`Reset ${label} to recommended defaults`);
