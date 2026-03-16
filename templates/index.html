@@ -2574,36 +2574,42 @@ const DEFAULTS = {
 };
 
 async function resetDefaults() {
-  if (!confirm('Reset all rules to recommended profit-optimised defaults?')) return;
+  const strategy = activeStrategy;
+  const label = strategy === 'daytrading' ? 'day trading' : 'momentum';
+  if (!confirm(`Reset ${label} rules to recommended defaults?`)) return;
   const d = DEFAULTS;
   const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
-  set('r-rsi-low', d.rsi_dip_low);      set('r-rsi-high', d.rsi_dip_high);
-  set('r-rsi-cross', d.rsi_cross_level); set('r-adx-min', d.adx_min);
-  set('r-atr-stop', d.atr_stop_mult);   set('r-atr-tp1', d.atr_tp1_mult);
-  set('r-tp1-pct', d.tp1_exit_pct);     set('r-time-stop', d.time_stop_candles);
-  set('r-risk-pct', d.risk_per_trade_pct); set('r-max-pos', d.max_open_positions);
-  set('r-daily-loss', d.daily_loss_limit_pct); set('r-interval', d.interval);
-  set('r-pairs', d.trade_pairs.join(','));
-  setToggle('rsi', d.rsi_enabled);       setToggle('adx', d.adx_enabled);
-  setToggle('volume-spike', d.volume_spike_enabled); set('r-vol-mult', d.volume_spike_mult);
-  setToggle('macd', d.macd_filter_enabled);          set('r-macd-mode', d.macd_mode);
-  setToggle('body', d.body_filter_enabled);           set('r-body-pct', d.body_filter_pct);
-  setToggle('minvol', d.min_volume_usdt_enabled);    set('r-minvol-usdt', d.min_volume_usdt);
-  setToggle('spread', d.max_spread_enabled);          set('r-spread-pct', d.max_spread_pct);
-  setToggle('cooldown', d.cooldown_enabled);          set('r-cooldown-h', d.cooldown_candles);
-  setToggle('fixed-stop', d.fixed_stop_enabled);     set('r-fixed-stop-pct', d.fixed_stop_pct);
-  setToggle('trail', d.trailing_stop_enabled);        set('r-trail-pct', d.trailing_stop_pct);
-  setToggle('breakeven', d.breakeven_stop_enabled);
-  setToggle('fixed-tp', d.fixed_tp_enabled);          set('r-fixed-tp-pct', d.fixed_tp_pct);
-  setToggle('rmult', d.r_multiple_tp_enabled);        set('r-rmult-val', d.r_multiple);
-  set('r-dt-rise-pct', d.dt_price_rise_pct);    set('r-dt-lookback', d.dt_lookback_candles);
-  set('r-dt-vol-mult', d.dt_volume_mult);        set('r-dt-max-rsi', d.dt_max_rsi);
-  set('r-dt-trail-pct', d.dt_trailing_stop_pct); set('r-dt-tp-pct', d.dt_take_profit_pct);
-  set('r-dt-breakeven', d.dt_breakeven_pct);     set('r-dt-time-stop', d.dt_time_stop_candles);
-  setStrategy(d.strategy);
+
+  if (strategy === 'daytrading') {
+    set('r-dt-rise-pct', d.dt_price_rise_pct);    set('r-dt-lookback', d.dt_lookback_candles);
+    set('r-dt-vol-mult', d.dt_volume_mult);        set('r-dt-max-rsi', d.dt_max_rsi);
+    set('r-dt-trail-pct', d.dt_trailing_stop_pct); set('r-dt-tp-pct', d.dt_take_profit_pct);
+    set('r-dt-breakeven', d.dt_breakeven_pct);     set('r-dt-time-stop', d.dt_time_stop_candles);
+  } else {
+    set('r-rsi-low', d.rsi_dip_low);      set('r-rsi-high', d.rsi_dip_high);
+    set('r-rsi-cross', d.rsi_cross_level); set('r-adx-min', d.adx_min);
+    set('r-atr-stop', d.atr_stop_mult);   set('r-atr-tp1', d.atr_tp1_mult);
+    set('r-tp1-pct', d.tp1_exit_pct);     set('r-time-stop', d.time_stop_candles);
+    set('r-risk-pct', d.risk_per_trade_pct); set('r-max-pos', d.max_open_positions);
+    set('r-daily-loss', d.daily_loss_limit_pct); set('r-interval', d.interval);
+    set('r-pairs', d.trade_pairs.join(','));
+    setToggle('rsi', d.rsi_enabled);       setToggle('adx', d.adx_enabled);
+    setToggle('volume-spike', d.volume_spike_enabled); set('r-vol-mult', d.volume_spike_mult);
+    setToggle('macd', d.macd_filter_enabled);          set('r-macd-mode', d.macd_mode);
+    setToggle('body', d.body_filter_enabled);           set('r-body-pct', d.body_filter_pct);
+    setToggle('minvol', d.min_volume_usdt_enabled);    set('r-minvol-usdt', d.min_volume_usdt);
+    setToggle('spread', d.max_spread_enabled);          set('r-spread-pct', d.max_spread_pct);
+    setToggle('cooldown', d.cooldown_enabled);          set('r-cooldown-h', d.cooldown_candles);
+    setToggle('fixed-stop', d.fixed_stop_enabled);     set('r-fixed-stop-pct', d.fixed_stop_pct);
+    setToggle('trail', d.trailing_stop_enabled);        set('r-trail-pct', d.trailing_stop_pct);
+    setToggle('breakeven', d.breakeven_stop_enabled);
+    setToggle('fixed-tp', d.fixed_tp_enabled);          set('r-fixed-tp-pct', d.fixed_tp_pct);
+    setToggle('rmult', d.r_multiple_tp_enabled);        set('r-rmult-val', d.r_multiple);
+  }
+
   ALL_SLIDERS.forEach(syncSlider);
   await saveRules();
-  showToast('Reset to recommended defaults');
+  showToast(`Reset ${label} to recommended defaults`);
 }
 
 // ── Bot Control ────────────────────────────────────────────────────
