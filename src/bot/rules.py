@@ -7,7 +7,7 @@ _RULES_DIR = "/data" if os.path.isdir("/data") else os.path.abspath(os.path.join
 
 DEFAULT_RULES = {
     # ── Strategy ───────────────────────────────────────────────────
-    "strategy":                 "momentum", # "momentum" | "daytrading"
+    "strategy":                 "daytrading", # "momentum" | "daytrading"
 
     # ── Pairs & execution ──────────────────────────────────────────
     "trade_pairs":              ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT"],
@@ -37,10 +37,10 @@ DEFAULT_RULES = {
     "min_volume_usdt_enabled":  False,     # skip low-volume pairs (off: testnet data limited)
     "min_volume_usdt":          10000000.0,# minimum $10M daily USDT volume
 
-    "max_spread_enabled":       True,      # skip wide-spread pairs
+    "max_spread_enabled":       False,     # skip wide-spread pairs
     "max_spread_pct":           0.1,       # max bid/ask spread as % of mid price
 
-    "cooldown_enabled":         True,      # wait after closing a trade on a pair
+    "cooldown_enabled":         False,     # wait after closing a trade on a pair
     "cooldown_candles":         4,         # hours to wait before re-entering same pair
 
     # ── Stop loss ──────────────────────────────────────────────────
@@ -78,12 +78,12 @@ DEFAULT_RULES = {
 
     # ── Day trading strategy parameters ───────────────────────────
     "dt_price_rise_pct":        1.5,       # price must rise X% over lookback candles
-    "dt_lookback_candles":      5,         # how many candles back to measure the rise
-    "dt_volume_mult":           2.0,       # entry volume must be > N× 20-period avg
-    "dt_max_rsi":               72.0,      # skip entry if RSI already overbought
-    "dt_trailing_stop_pct":     0.75,      # trailing stop lags N% below price high
-    "dt_take_profit_pct":       2.0,       # exit full position at N% gain
-    "dt_breakeven_pct":         0.5,       # slide stop to entry once up N% (scratch losers)
+    "dt_lookback_candles":      3,         # how many candles back to measure the rise
+    "dt_volume_mult":           1.5,       # entry volume must be > N× 20-period avg
+    "dt_max_rsi":               75.0,      # skip entry if RSI already overbought
+    "dt_trailing_stop_pct":     1.5,       # trailing stop lags N% below price high
+    "dt_take_profit_pct":       3.0,       # exit full position at N% gain
+    "dt_breakeven_pct":         1.0,       # slide stop to entry once up N% (scratch losers)
     "dt_time_stop_candles":     20,        # close losing trade after N candles (capital protection)
 }
 
