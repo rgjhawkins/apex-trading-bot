@@ -45,7 +45,6 @@
   "dt_price_rise_pct": 1.5,
   "dt_lookback_candles": 3,
   "dt_volume_mult": 1.5,
-  "dt_max_rsi": 75,
   "dt_trailing_stop_pct": 1.5,
   "dt_take_profit_pct": 3.0,
   "dt_breakeven_pct": 1.0,

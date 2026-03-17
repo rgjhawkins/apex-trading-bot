@@ -80,8 +80,7 @@ DEFAULT_RULES = {
     "dt_price_rise_pct":        1.5,       # price must rise X% over lookback candles
     "dt_lookback_candles":      3,         # how many candles back to measure the rise
     "dt_volume_mult":           1.5,       # entry volume must be > N× 20-period avg
-    "dt_max_rsi":               75.0,      # skip entry if RSI already overbought
-    "dt_trailing_stop_pct":     1.5,       # trailing stop lags N% below price high
+"dt_trailing_stop_pct":     1.5,       # trailing stop lags N% below price high
     "dt_take_profit_pct":       3.0,       # exit full position at N% gain
     "dt_breakeven_pct":         1.0,       # slide stop to entry once up N% (scratch losers)
     "dt_time_stop_candles":     20,        # close losing trade after N candles (capital protection)
