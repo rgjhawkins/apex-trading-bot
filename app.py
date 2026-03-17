@@ -625,6 +625,74 @@ def api_change_password():
     return jsonify({"ok": True})
 
 
+# ── Chart routes ──────────────────────────────────────────────────
+
+@app.route("/chart")
+def chart_page():
+    username = session.get("username", "")
+    if not username:
+        return redirect("/login")
+    return render_template("chart.html", username=username)
+
+
+@app.route("/api/chart-data")
+def api_chart_data():
+    username = session.get("username", "")
+    client   = _clients.get(username)
+    if client is None:
+        return jsonify({"error": "Exchange not connected"}), 400
+
+    symbol   = request.args.get("symbol", "BTCUSDT").upper()
+    interval = request.args.get("interval", "1h")
+    limit    = min(int(request.args.get("limit", 500)), 1000)
+
+    try:
+        raw = client.client.get_klines(symbol=symbol, interval=interval, limit=limit)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    candles = [
+        {
+            "time":  int(k[0]) // 1000,   # seconds — Lightweight Charts expects UNIX seconds
+            "open":  float(k[1]),
+            "high":  float(k[2]),
+            "low":   float(k[3]),
+            "close": float(k[4]),
+            "volume": float(k[5]),
+        }
+        for k in raw
+    ]
+
+    # Pull trade markers for this symbol
+    eng    = get_engine(username)
+    trades = eng.pm.get_closed_trades(limit=500)
+    markers = []
+    for t in trades:
+        if t.get("symbol") != symbol:
+            continue
+        # entry marker
+        try:
+            entry_ts = int(datetime.fromisoformat(t["entry_time"]).timestamp())
+            markers.append({"time": entry_ts, "type": "buy",
+                            "price": t["entry_price"], "pnl": None})
+        except Exception:
+            pass
+        # exit marker
+        try:
+            exit_ts = int(datetime.fromisoformat(t["exit_time"]).timestamp())
+            pnl     = t.get("pnl_usdt", 0)
+            markers.append({"time": exit_ts, "type": "sell",
+                            "price": t["exit_price"], "pnl": pnl,
+                            "reason": t.get("reason", "")})
+        except Exception:
+            pass
+
+    rules = load_rules(username)
+    pairs = rules.get("trade_pairs", ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"])
+
+    return jsonify({"candles": candles, "markers": markers, "pairs": pairs})
+
+
 # ── Marketplace routes ────────────────────────────────────────────
 
 @app.route("/marketplace")
